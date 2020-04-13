@@ -53,7 +53,7 @@ cdef double lngamma_cache(double[:] LAMBDA, int g, long n) nogil:
 # ------ likelihood functions ------ #
 
 @cython.boundscheck(False)
-cdef double find_dirichlet_norm(np.ndarray[np.float_t, ndim=1] LAMBDA):
+cdef double find_dirichlet_norm(double[:] LAMBDA):
     cdef:
         int G = LAMBDA.shape[0]
         double thesum = 0
@@ -203,32 +203,35 @@ cdef double find_cluster_distance(Cluster clst, int i, int j):
 # ------ moving cells between clusters ------ #
 
 @cython.boundscheck(False)
-cdef move_cell_nocalc(Cluster clst, integral m, integral c_new,
-                      double LL_c_old, double LL_c_new):
+cdef void move_cell_nocalc(Cluster clst, integral m, integral c_new,
+                            double LL_c_old, double LL_c_new):
     """ move cell m to cluster c_new in Cluster object;
     likelihood changes need to be pre-calculated """
     cdef int c_old = clst._clusters[m]
 
-    clst._cluster_sizes[c_old] -= 1
-    clst._clusters[m] = c_new
-    clst._cluster_sizes[c_new] += 1
-    clst._likelihood[c_old] = LL_c_old
-    clst._likelihood[c_new] = LL_c_new
+    if c_old != c_new:
+        clst._cluster_sizes[c_old] -= 1
+        clst._clusters[m] = c_new
+        clst._cluster_sizes[c_new] += 1
+        clst._likelihood[c_old] = LL_c_old
+        clst._likelihood[c_new] = LL_c_new
 
-    clst._cluster_umi_sum[c_old] -= clst._cell_umi_sum[m]
-    clst._cluster_umi_sum[c_new] += clst._cell_umi_sum[m]
+        clst._cluster_umi_sum[c_old] -= clst._cell_umi_sum[m]
+        clst._cluster_umi_sum[c_new] += clst._cell_umi_sum[m]
 
-    for g in range(clst.G):
-        clst._cluster_umi_counts[g, c_old] -= clst.data[g, m]
-        clst._cluster_umi_counts[g, c_new] += clst.data[g, m]
+        for g in range(clst.G):
+            clst._cluster_umi_counts[g, c_old] -= clst.data[g, m]
+            clst._cluster_umi_counts[g, c_new] += clst.data[g, m]
 
 
 @cython.boundscheck(False)
 cdef void move_cell(Cluster clst, integral m, integral c_new):
     cdef double LL_c_old, LL_c_new
-    LL_c_old = find_LL_c_old(clst, m)
-    LL_c_new = find_LL_c_new(clst, m, c_new)
-    move_cell_nocalc(clst, m, c_new, LL_c_old, LL_c_new)
+    cdef int c_old = clst._clusters[m]
+    if c_old != c_new:
+        LL_c_old = find_LL_c_old(clst, m)
+        LL_c_new = find_LL_c_new(clst, m, c_new)
+        move_cell_nocalc(clst, m, c_new, LL_c_old, LL_c_new)
 
 
 @cython.boundscheck(False)
@@ -538,12 +541,16 @@ cdef class Cluster:
     ----------
     d : 2D array of ints
         UMI count array of shape (N_genes, N_cells)
-    l : 1D array
-        The pseudo-counts lambda for each gene. Has to be of shape (N_genes, ).
-        All entries must be > 0.
-    c : 1D array of ints
+    l : 1D array or float, default=None
+        If array, the pseudo-counts lambda for each gene. Has to be of shape (N_genes, ).
+        All entries must be > 0. If float, defines the magnitude of the pseudo-counts,
+        but their relative sizes is set by data average. If None, magnitude is chosen
+        automatically.
+    c : 1D array of ints, default=None
         Cluster labels for each cell. Has to be of shape (N_cells, ).
-        Labels must be positive and < N_boxes
+        Labels must be positive and < N_boxes. If None, every cell is in its own cluster.
+    genes : 1D array, optional
+        Names of genes; does not have to be set.
     max_clusters : int, default 0
         Maximum number of clusters allowed (acces through item N_boxes).
         if max_clusters=0, N_boxes=N_cells
@@ -559,34 +566,76 @@ cdef class Cluster:
     clst : object of type Cluster
     """
 
-    def __cinit__(self, d, l, c,
+    def __cinit__(self, d,
+                  l=None,
+                  c=None,
+                  genes=None,
                   int max_clusters=0,
                   int num_threads=0,
                   int n_cache=100):
 
-        if d.shape[0] != l.shape[0]:
-            raise ValueError('The shapes of the data and lambda do not match')
-        elif d.shape[1] != c.shape[0]:
-            raise ValueError(
-                'the shapes of the data and clusters do not match')
+        if isinstance(l, np.ndarray):
+            if d.shape[0] != l.shape[0]:
+                raise ValueError('The shapes of the data and lambda do not match')
+            elif np.any(l<=0):
+                raise ValueError('all dirichlet pseudo-counts must be >0')
+            self.LAMBDA_sum = np.sum(l)
+        else:
+            if l is None:
+                self.LAMBDA_sum = 2**(np.round(np.log2(d.sum()/d.shape[1])))
+            else:
+                l = float(l)
+                if l <= 0.:
+                    raise ValueError('dirichlet prior parameter must be > 0')
+                self.LAMBDA_sum = l
+            l = self.LAMBDA_sum*np.sum(d, axis=1)/np.sum(d)
+            mask = ( l>0 )
+            if np.any(mask):
+                l = l[mask]
+                d = d[mask, :]
 
+        self.LAMBDA = <np.ndarray[np.float_t, ndim = 1]> l
         self.data = <np.ndarray[np.int_t, ndim = 2]?> d
-        self.LAMBDA = <np.ndarray[np.float_t, ndim = 1]?> l
-        self._clusters = <np.ndarray[np.int32_t, ndim = 1]?> c.astype(np.int32)
         self.G = d.shape[0]
         self.N_samples = d.shape[1]
-        self.n_cache = n_cache
-        self.LAMBDA_sum = np.sum(l)
 
         if max_clusters > 0:
             self.N_boxes = max_clusters
         else:
             self.N_boxes = self.N_samples
 
-    def __init__(self, d, l, c,
-                 int max_clusters=0,
-                 int num_threads=0,
-                 int n_cache=100):
+        if c is None:
+            c = np.arange(self.N_samples, dtype=np.int32)
+        elif d.shape[1] != len(c):
+            raise ValueError(
+                'the shapes of the data and clusters do not match')
+        else:
+            # check clusters provided is consistent with N_boxes
+            if np.max(c) >= self.N_boxes:
+                raise ValueError(
+                    'all cluster labels must be smaller than max_clusters')
+            elif np.min(c) < 0:
+                raise ValueError('all cluster labels must be positive')
+            c = np.array(c, dtype=np.int32)
+
+        self._clusters = <np.ndarray[np.int32_t, ndim = 1]?> c
+
+        self.n_cache = n_cache
+
+    def __init__(self, d,
+                  l=None,
+                  c=None,
+                  genes=None,
+                  int max_clusters=0,
+                  int num_threads=0,
+                  int n_cache=100):
+
+        if genes is not None:
+            if not isinstance(l, np.ndarray):
+                mask = np.any(d, axis=1)
+                self.genes = genes[mask]
+            else:
+                self.genes = genes
 
         if num_threads == 0:
             num_threads = openmp.omp_get_num_procs() - 1
@@ -594,15 +643,8 @@ cdef class Cluster:
 
         self._init_lngamma_cache()
 
-        # check clusters provided is consistent with N_boxes
-        if np.max(c) >= self.N_boxes:
-            raise ValueError(
-                'all cluster labels must be smaller than max_clusters')
-        elif np.min(c) < 0:
-            raise ValueError('all cluster labels must be positive')
-
         self._init_counts()
-        self.B = find_dirichlet_norm(l)
+        self.B = find_dirichlet_norm(self.LAMBDA)
         self._init_likelihood()
 
     cdef void _init_lngamma_cache(self):
@@ -1066,3 +1108,8 @@ cdef class Cluster:
     def umi_data(self):
         """ numpy array of UMI counts """
         return np.asarray(self.data, dtype=np.int)
+
+    @property
+    def genes(self):
+        """ numpy array of gene names """
+        return self.genes

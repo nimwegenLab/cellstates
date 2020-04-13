@@ -1,6 +1,6 @@
 from cellstates.cluster import Cluster
 from cellstates.run import run_mcmc
-from cellstates.helpers import get_hierarchy_df
+from cellstates.helpers import get_hierarchy_df, marker_score_table
 import numpy as np
 import pandas as pd
 import argparse
@@ -30,10 +30,12 @@ def main():
     if datafile.endswith('.txt') or datafile.endswith('.tsv'):
         df = pd.read_csv(datafile, sep='\t', header=0, index_col=0)
         df = df.astype(np.int, copy=False)
+        genes = df.index.values
         data = df.values
     elif datafile.endswith('.npy'):
         data = np.load(datafile)
         data = data.astype(np.int, copy=False)
+        genes = np.arange(data.shape[0], dtype=int)
 
     if args.dirichlet is None:
         find_best_alpha=True
@@ -52,6 +54,7 @@ def main():
     mask = LAMBDA > 0
     data = data[mask, :]
     LAMBDA = LAMBDA[mask]
+    genes = genes[mask]
     G, N = data.shape
 
     if args.init is None:
@@ -115,6 +118,10 @@ def main():
             find_best_alpha=False
 
 
+    logging.info('save dirichlet pseudocounts used.')
+    cluster_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')
+    np.savetxt(cluster_file, clst.dirichlet_pseudocounts)
+
     logging.info('save clusters as optimized_clusters.txt')
     cluster_file = os.path.join(args.outdir, 'optimized_clusters.txt')
     np.savetxt(cluster_file, clst.clusters, fmt='%i')
@@ -126,6 +133,15 @@ def main():
     hierarchy_df = get_hierarchy_df(cluster_hierarchy, delta_LL_history)
     logging.info('save cluster hierarchy as cluster_hierarchy.tsv')
     hierarchy_df.to_csv(hierarchy_file, sep='\t', index=None)
+
+    logging.info('get marker gene scores')
+    score_table = marker_score_table(clst, hierarchy_df)
+    score_df = pd.concat([hierarchy_df,
+                          pd.DataFrame(score_table, columns=genes)],
+                         axis=1)
+    score_file = os.path.join(args.outdir, 'hierarchy_gene_scores.tsv')
+    logging.info('save marker gene scores as hierarchy_gene_scores.tsv')
+    score_df.to_csv(score_file, sep='\t', index=None)
 
 
 if __name__ == '__main__':

@@ -17,6 +17,7 @@ cdef class Cluster:
         long[:] _cell_umi_sum  # total UMI counts per cell
         double[:, :] _lngamma_cache
         int n_cache
+        object genes
     cdef void _init_lngamma_cache(self)
     cdef void _init_counts(self)
     cdef void _init_likelihood(self)
