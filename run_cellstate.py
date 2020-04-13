@@ -27,15 +27,18 @@ def main():
     args = parser.parse_args()
 
     datafile = args.data
-    if datafile.endswith('.txt') or datafile.endswith('.tsv'):
+    filetype=datafile.split('.')[-1]
+    if filetype in ['txt', 'tsv', 'zip']:
         df = pd.read_csv(datafile, sep='\t', header=0, index_col=0)
         df = df.astype(np.int, copy=False)
         genes = df.index.values
         data = df.values
-    elif datafile.endswith('.npy'):
+    elif filetype=='npy'
         data = np.load(datafile)
         data = data.astype(np.int, copy=False)
         genes = np.arange(data.shape[0], dtype=int)
+    else:
+        raise ValueError('filetype not recognized')
 
     if args.dirichlet is None:
         find_best_alpha=True
