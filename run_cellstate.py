@@ -28,7 +28,8 @@ def main():
 
     datafile = args.data
     filetype=datafile.split('.')[-1]
-    if filetype in ['txt', 'tsv', 'zip']:
+
+    if filetype in ['txt', 'tsv', 'zip', 'gz', 'bz2', 'xz']:
         df = pd.read_csv(datafile, sep='\t', header=0, index_col=0)
         df = df.astype(np.int, copy=False)
         genes = df.index.values
