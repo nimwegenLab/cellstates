@@ -34,7 +34,7 @@ def main():
         df = df.astype(np.int, copy=False)
         genes = df.index.values
         data = df.values
-    elif filetype=='npy'
+    elif filetype=='npy':
         data = np.load(datafile)
         data = data.astype(np.int, copy=False)
         genes = np.arange(data.shape[0], dtype=int)
