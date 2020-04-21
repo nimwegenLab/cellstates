@@ -1,29 +1,36 @@
-from setuptools import setup
-from Cython.Distutils import build_ext, Extension
-import cython_gsl
+from setuptools import setup, Extension
 import numpy
 
 NAME = 'cellstates'
 VERSION = '0.1'
 DESCR = 'Module for finding gene expression states in scRNAseq data'
-REQUIRES = ['numpy', 'cython', 'CythonGSL']
+REQUIRES = ['numpy', 'pandas', 'matplotlib', 'ete3']
 
 AUTHOR = 'Pascal Grobecker'
 EMAIL = 'pascal.grobecker@unibas.ch'
 
 PACKAGES = ['cellstates']
 
-ext_1 = Extension("cellstates.cluster",
-                  ["cellstates/cluster.pyx"],
-                  libraries=cython_gsl.get_libraries(),
-                  library_dirs=[cython_gsl.get_library_dir()],
-                  include_dirs=[cython_gsl.get_cython_include_dir(),
-                                numpy.get_include(), '.'],
-                  extra_compile_args=['-fopenmp'],
-                  extra_link_args=['-fopenmp']
-                  )
 
-EXTENSIONS = [ext_1]
+USE_CYTHON = True
+try:
+    from Cython.Build import cythonize
+except ModuleNotFoundError:
+    USE_CYTHON = False
+
+ext = '.pyx' if USE_CYTHON else '.c'
+
+EXTENSIONS = [Extension("cellstates.cluster",
+                        ["cellstates/cluster" + ext],
+                        include_dirs=[numpy.get_include(), '.'],
+                        extra_compile_args=['-fopenmp'],
+                        extra_link_args=['-fopenmp']
+                        )
+              ]
+
+if USE_CYTHON:
+    EXTENSIONS = cythonize(EXTENSIONS)
+                           # compiler_directives={'language_level': 3})
 
 if __name__ == '__main__':
     setup(
@@ -34,7 +41,5 @@ if __name__ == '__main__':
         author_email=EMAIL,
         install_requires=REQUIRES,
         packages=PACKAGES,
-        include_dirs=[cython_gsl.get_include()],
-        cmdclass={'build_ext': build_ext},
         ext_modules=EXTENSIONS
     )

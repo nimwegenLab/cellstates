@@ -1,32 +1,25 @@
+# cython: language_level=3, boundscheck=False
+
 cimport cython
-from cython cimport integral
+# from cython cimport int
 import numpy as np
 cimport numpy as np
-from cython_gsl cimport gsl_sf_lngamma as lngamma, gsl_sf_exp as cexp, gsl_sf_log as clog
 from cython.parallel import prange
-cimport openmp
 from cpython.exc cimport PyErr_CheckSignals
-from libc.stdlib cimport rand as rand_c
+from libc.stdlib cimport rand, srand
 
 
 # ------ c-functions and constants ------ #
 
-cdef extern from "limits.h":
-    int INT_MAX
-    double DBL_MIN
-    double DBL_MAX
-
-cdef double MIN_EXP_ARG = clog(DBL_MIN)
-
 @cython.cdivision(True)
 cdef double randnum():
     """ returns random float between 0 and 1 """
-    return rand_c() / <double>INT_MAX
+    return rand() / <double>RAND_MAX
 
 @cython.cdivision(True)
-cdef integral randint_c(integral n):
+cdef int randint(int n):
     """ returns random int between 0 and n-1 """
-    return rand_c() % n
+    return rand() % n
 
 
 # ------ functions for setting log-gamma cache ------ #
@@ -42,74 +35,33 @@ def set_cache(double[:, :] cache):
     N_CACHE = cache.shape[1]
 
 
-@cython.boundscheck(False)
-cdef double lngamma_cache(double[:] LAMBDA, int g, long n) nogil:
+
+cdef double lgamma_cache(double[:] LAMBDA, int g, long n) nogil:
     if n < N_CACHE:
         return LNGAMMA_CACHE[g, n]
     else:
-        return lngamma(LAMBDA[g] + n)
+        return lgamma(LAMBDA[g] + n)
 
 
 # ------ likelihood functions ------ #
 
-@cython.boundscheck(False)
-cdef double find_dirichlet_norm(double[:] LAMBDA):
+
+cdef double find_dirichlet_norm(double[:] LAMBDA, int num_threads):
     cdef:
         int G = LAMBDA.shape[0]
         double thesum = 0
         double B = 0
         int i
 
-    for i in prange(G, nogil=True):
+    for i in prange(G, nogil=True, num_threads=num_threads):
         thesum += LAMBDA[i]
-        B -= lngamma(LAMBDA[i])
-    B += lngamma(thesum)
+        B -= lgamma(LAMBDA[i])
+    B += lgamma(thesum)
 
     return B
 
 
-@cython.boundscheck(False)
-cdef double LL_add(long[:] A1, long[:] A2, double[:] LAMBDA, double B):
-    """ find LL of count vector A1 + A2 """
-    cdef:
-        double result = B
-        double Nc = 0., nc
-        int i
-        int G = LAMBDA.shape[0]
-        long n
 
-    for i in prange(G, schedule='static', nogil=True):
-        n = A1[i] + A2[i]
-        nc = LAMBDA[i] + n
-        Nc += nc
-        result += lngamma_cache(LAMBDA, i, n)
-
-    result = result-lngamma(Nc)
-
-    return result
-
-
-@cython.boundscheck(False)
-cdef double LL_subtract(long[:] A1, long[:] A2, double[:] LAMBDA, double B):
-    """ find LL of count vector A1 - A2 """
-    cdef:
-        double result = B
-        double Nc = 0., nc
-        int i
-        int G = LAMBDA.shape[0]
-        long n
-
-    for i in prange(G, schedule='static', nogil=True):
-        n = A1[i] - A2[i]
-        nc = LAMBDA[i] + n
-        Nc += nc
-        result += lngamma_cache(LAMBDA, i, n)
-
-    result = result-lngamma(Nc)
-    return result
-
-
-@cython.boundscheck(False)
 cdef double find_LL_c_old(Cluster clst, int m):
     """ find new log-likelihood when cell m is moved out of its cluster"""
     cdef:
@@ -126,16 +78,16 @@ cdef double find_LL_c_old(Cluster clst, int m):
         lmbd = clst.LAMBDA
 
         n = clst._cluster_umi_sum[c_old] - clst._cell_umi_sum[m]
-        result = clst.B - lngamma(n + clst.LAMBDA_sum)
-        for g in prange(clst.G, nogil=True):
+        result = clst.B - lgamma(n + clst.LAMBDA_sum)
+        for g in prange(clst.G, nogil=True, num_threads=clst.num_threads):
             n = C[g] - M[g]
-            result += lngamma_cache(lmbd, g, n)
+            result += lgamma_cache(lmbd, g, n)
     else:
         result = 0.
     return result
 
 
-@cython.boundscheck(False)
+
 cdef double find_LL_c_new(Cluster clst, int m, int c_new):
     """ find new log-likelihood when cell m is moved out into cluster c_new"""
     cdef:
@@ -150,15 +102,15 @@ cdef double find_LL_c_new(Cluster clst, int m, int c_new):
     lmbd = clst.LAMBDA
 
     n = clst._cluster_umi_sum[c_new] + clst._cell_umi_sum[m]
-    result = clst.B - lngamma(n + clst.LAMBDA_sum)
+    result = clst.B - lgamma(n + clst.LAMBDA_sum)
 
-    for g in prange(clst.G, nogil=True):
+    for g in prange(clst.G, nogil=True, num_threads=clst.num_threads):
         n = C[g] + M[g]
-        result += lngamma_cache(lmbd, g, n)
+        result += lgamma_cache(lmbd, g, n)
     return result
 
 
-@cython.boundscheck(False)
+
 cdef double find_cluster_LL(Cluster clst, int c):
     """ find log-likelihood of cluster c """
     cdef:
@@ -168,16 +120,16 @@ cdef double find_cluster_LL(Cluster clst, int c):
         double[:] lmbd = clst.LAMBDA
 
     if clst._cluster_sizes[c] > 0:
-        result = clst.B - lngamma(clst._cluster_umi_sum[c] + clst.LAMBDA_sum)
-        for g in prange(clst.G, schedule='static', nogil=True):
-            result += lngamma_cache(lmbd, g, C[g])
+        result = clst.B - lgamma(clst._cluster_umi_sum[c] + clst.LAMBDA_sum)
+        for g in prange(clst.G, schedule='static', nogil=True, num_threads=clst.num_threads):
+            result += lgamma_cache(lmbd, g, C[g])
     else:
         result = 0.
 
     return result
 
 
-@cython.boundscheck(False)
+
 cdef double find_cluster_distance(Cluster clst, int i, int j):
     """ return change in likelihood if two clusters i and j were merged """
     cdef:
@@ -191,19 +143,19 @@ cdef double find_cluster_distance(Cluster clst, int i, int j):
     lmbd = clst.LAMBDA
 
     n = clst._cluster_umi_sum[i] + clst._cluster_umi_sum[j]
-    delta = clst.B - lngamma(n + clst.LAMBDA_sum)
+    delta = clst.B - lgamma(n + clst.LAMBDA_sum)
 
-    for g in prange(clst.G, nogil=True):
+    for g in prange(clst.G, nogil=True, num_threads=clst.num_threads):
         n = Ci[g] + Cj[g]
-        delta += lngamma_cache(lmbd, g, n)
+        delta += lgamma_cache(lmbd, g, n)
     delta -= clst._likelihood[i] + clst._likelihood[j]
     return delta
 
 
 # ------ moving cells between clusters ------ #
 
-@cython.boundscheck(False)
-cdef void move_cell_nocalc(Cluster clst, integral m, integral c_new,
+
+cdef void move_cell_nocalc(Cluster clst, int m, int c_new,
                             double LL_c_old, double LL_c_new):
     """ move cell m to cluster c_new in Cluster object;
     likelihood changes need to be pre-calculated """
@@ -224,8 +176,7 @@ cdef void move_cell_nocalc(Cluster clst, integral m, integral c_new,
             clst._cluster_umi_counts[g, c_new] += clst.data[g, m]
 
 
-@cython.boundscheck(False)
-cdef void move_cell(Cluster clst, integral m, integral c_new):
+cdef void move_cell(Cluster clst, int m, int c_new):
     cdef double LL_c_old, LL_c_new
     cdef int c_old = clst._clusters[m]
     if c_old != c_new:
@@ -234,24 +185,6 @@ cdef void move_cell(Cluster clst, integral m, integral c_new):
         move_cell_nocalc(clst, m, c_new, LL_c_old, LL_c_new)
 
 
-@cython.boundscheck(False)
-cdef double find_move_LL(Cluster clst, integral m, integral c_new):
-    """ returns change in log-likelihood if cell m is moved to c_new """
-    cdef:
-        double delta
-        int c_old = clst._clusters[m]
-
-    if c_old == c_new:
-        delta = 0.
-    else:
-        delta = - clst._total_likelihood[c_old] - clst._total_likelihood[c_new]
-        delta += find_LL_c_new(clst, m, c_new)
-        delta += find_LL_c_old(clst, m)
-
-    return delta
-
-
-@cython.boundscheck(False)
 cdef void merge_two_clusters(Cluster clst, int c1, int c2, delta=None):
     """ merge the two clusters c1 and c2 into one (label c1) """
     cdef:
@@ -283,7 +216,7 @@ cdef void merge_two_clusters(Cluster clst, int c1, int c2, delta=None):
 
 # ------ running MCMC ------ #
 
-@cython.boundscheck(False)
+
 cdef do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
     """ uniform sampling of partition space with bias towards better partitions """
     cdef:
@@ -294,13 +227,13 @@ cdef do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
         double move_bias, move_likelihood
         double LL_c_new, LL_c_old
 
-    set_cache(clst._lngamma_cache)
+    set_cache(clst._lgamma_cache)
 
     while tries < max_tries and n_move_successes < N_steps:
         PyErr_CheckSignals()
 
-        m = randint_c(clst.N_samples)  # index of cell
-        c_new = randint_c(clst.N_boxes)  # index of new cluster
+        m = randint(clst.N_samples)  # index of cell
+        c_new = randint(clst.N_boxes)  # index of new cluster
         c_old = clst._clusters[m]  # index of current cluster of m
 
         # Biase move to generate uniform samplng of partition space
@@ -313,10 +246,10 @@ cdef do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
                 continue
             else:
                 # n_clusters += 1
-                move_bias = - clog(clst.N_boxes - clst.n_clusters)
+                move_bias = - log(clst.N_boxes - clst.n_clusters)
         elif clst._cluster_sizes[c_old] == 1 and clst._cluster_sizes[c_new] != 0:
             # n_clusters -= 1
-            move_bias = clog(clst.N_boxes - clst.n_clusters + 1.)
+            move_bias = log(clst.N_boxes - clst.n_clusters + 1.)
         else:
             # n_clusters unchanged
             move_bias = 0.
@@ -332,11 +265,11 @@ cdef do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
             (clst._likelihood[c_old] + clst._likelihood[c_new])
 
         if move_likelihood < MIN_EXP_ARG:
-            # if delta_LL is too small, cexp will fail
+            # if delta_LL is too small, exp will fail
             # probability of move is too small to be represented by
             # double and hence rejected
             continue
-        elif move_likelihood < 0 and randnum() > cexp(move_likelihood):
+        elif move_likelihood < 0 and randnum() > exp(move_likelihood):
             # accept move only with probability exp(move_likelihood)
             continue
 
@@ -351,7 +284,7 @@ cdef do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
 
 # ------ merging/cluster hierarchy ------ #
 
-@cython.boundscheck(False)
+
 cdef tuple find_argsmax(double[:, :] D, unsigned char[:] mask):
     """
     find index of maximal value in D assuming D is diagonal and only
@@ -373,8 +306,10 @@ cdef tuple find_argsmax(double[:, :] D, unsigned char[:] mask):
     i_max : int
         larger index of maximum position
     """
-    cdef int N = D.shape[0]
-    cdef double D_max = -np.inf
+    cdef:
+        int N = D.shape[0]
+        double D_max = -np.inf
+        int i_max, j_max, i, j
 
     for i in range(N):
         if mask[i]:
@@ -387,7 +322,7 @@ cdef tuple find_argsmax(double[:, :] D, unsigned char[:] mask):
     return D_max, j_max, i_max
 
 
-@cython.boundscheck(False)
+
 def merge_clusters_hierarchical(Cluster clst,
                                 double LL_threshold=0.,
                                 int n_cluster_threshold=1):
@@ -397,7 +332,7 @@ def merge_clusters_hierarchical(Cluster clst,
         double delta
         cdef list delta_LL_history, merge_hierarchy
 
-    set_cache(clst._lngamma_cache)
+    set_cache(clst._lgamma_cache)
 
     # boolean array indicating which clusters still exist
     cdef np.ndarray[np.uint8_t, ndim = 1] cluster_exists
@@ -457,7 +392,7 @@ def merge_clusters_hierarchical(Cluster clst,
     return merge_hierarchy, delta_LL_history
 
 
-@cython.boundscheck(False)
+
 def merge_clusters_optimally(Cluster clst):
     """ merge clusters hierarchically until maximum likelihood """
     cdef:
@@ -478,7 +413,7 @@ def merge_clusters_optimally(Cluster clst):
 
 # ------ optimizing cluster ------ #
 
-@cython.boundscheck(False)
+
 def optimize_cell_positions_full(Cluster clst):
     """
     move individual cells to their optimal cluster.
@@ -518,7 +453,7 @@ def optimize_cell_positions_full(Cluster clst):
             cell_iter = np.argsort(-best_delta_LL)[:clst.N_samples//5]
 
 
-@cython.boundscheck(False)
+
 def optimize_cell_positions_simple(Cluster clst):
     """
     move individual cells to their optimal cluster
@@ -532,7 +467,7 @@ def optimize_cell_positions_simple(Cluster clst):
 
 # ------ Cluster class definition ------ #
 
-@cython.boundscheck(False)
+
 cdef class Cluster:
     """
     Object that contains SC expression data, lambda and stores a partition
@@ -554,12 +489,13 @@ cdef class Cluster:
     max_clusters : int, default 0
         Maximum number of clusters allowed (acces through item N_boxes).
         if max_clusters=0, N_boxes=N_cells
-    num_threads : int, default 4
+    num_threads : int, default 1
         Number of threads used in parallel computations.
-        Implementation might be unstable.
     n_cache : int, default=100
-        Number of lngamma values to store per gene.
+        Number of lgamma values to store per gene.
         Large values speed up calculations, but use more memory
+    seed : unsigned int, default=1
+        random generator seed
 
     Returns
     -------
@@ -571,8 +507,9 @@ cdef class Cluster:
                   c=None,
                   genes=None,
                   int max_clusters=0,
-                  int num_threads=0,
-                  int n_cache=100):
+                  int num_threads=1,
+                  int n_cache=100,
+                  unsigned int seed=1):
 
         if isinstance(l, np.ndarray):
             if d.shape[0] != l.shape[0]:
@@ -621,14 +558,18 @@ cdef class Cluster:
         self._clusters = <np.ndarray[np.int32_t, ndim = 1]?> c
 
         self.n_cache = n_cache
+        self.num_threads = num_threads
+
+        srand(seed)
 
     def __init__(self, d,
                   l=None,
                   c=None,
                   genes=None,
                   int max_clusters=0,
-                  int num_threads=0,
-                  int n_cache=100):
+                  int num_threads=1,
+                  int n_cache=100,
+                  unsigned int seed=1):
 
         if genes is not None:
             if not isinstance(l, np.ndarray):
@@ -637,23 +578,19 @@ cdef class Cluster:
             else:
                 self.genes = genes
 
-        if num_threads == 0:
-            num_threads = openmp.omp_get_num_procs() - 1
-        openmp.omp_set_num_threads(num_threads)
-
-        self._init_lngamma_cache()
+        self._init_lgamma_cache()
 
         self._init_counts()
-        self.B = find_dirichlet_norm(self.LAMBDA)
+        self.B = find_dirichlet_norm(self.LAMBDA, self.num_threads)
         self._init_likelihood()
 
-    cdef void _init_lngamma_cache(self):
+    cdef void _init_lgamma_cache(self):
         cdef int i, g
-        self._lngamma_cache = np.zeros((self.G, self.n_cache), dtype=np.float)
+        self._lgamma_cache = np.zeros((self.G, self.n_cache), dtype=np.float)
         for g in range(self.G):
             for i in range(self.n_cache):
-                self._lngamma_cache[g, i] = lngamma(self.LAMBDA[g] + i)
-        set_cache(self._lngamma_cache)
+                self._lgamma_cache[g, i] = lgamma(self.LAMBDA[g] + i)
+        set_cache(self._lgamma_cache)
 
     cdef void _init_counts(self):
         """
@@ -837,7 +774,7 @@ cdef class Cluster:
                                     self.clusters.copy(),
                                     max_clusters=self.N_boxes,
                                     n_cache=self.n_cache)
-        self_copy._lngamma_cache = self._lngamma_cache
+        self_copy._lgamma_cache = self._lgamma_cache
         self_copy.B = self.B
         self_copy._likelihood = self.likelihood.copy()
         self_copy._init_counts()

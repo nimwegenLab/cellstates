@@ -1,3 +1,15 @@
+cdef extern from "math.h" nogil:
+    cdef double lgamma(double x)
+    cdef double exp(double x)
+    cdef double log(double x)
+
+cdef extern from "limits.h":
+    int RAND_MAX
+    double DBL_MAX
+    double DBL_MIN
+
+cdef double MIN_EXP_ARG = log(DBL_MIN)
+
 cdef class Cluster:
     cdef readonly:
         int G  # number of genes
@@ -15,10 +27,11 @@ cdef class Cluster:
         int[:] _cluster_sizes  # number of cells in every cluster
         long[:] _cluster_umi_sum  # total UMI counts per cluster
         long[:] _cell_umi_sum  # total UMI counts per cell
-        double[:, :] _lngamma_cache
+        double[:, :] _lgamma_cache
         int n_cache
+        int num_threads
         object genes
-    cdef void _init_lngamma_cache(self)
+    cdef void _init_lgamma_cache(self)
     cdef void _init_counts(self)
     cdef void _init_likelihood(self)
     cpdef void combine_two_clusters(self, int c1, int c2)
