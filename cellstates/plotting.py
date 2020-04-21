@@ -2,10 +2,15 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
-from ete3 import Tree, TreeStyle, NodeStyle
 from scipy.cluster.hierarchy import dendrogram
 from .cluster import Cluster
 from .helpers import get_scipy_hierarchy, hierarchy_to_newick, clusters_from_hierarchy
+
+USE_ETE = True
+try:
+    from ete3 import Tree, TreeStyle, NodeStyle
+except ImportError:
+    USE_ETE = False
 
 
 def plot_hierarchy_scipy(hierarchy_df, n_groups, **kwargs):
@@ -36,61 +41,62 @@ def plot_hierarchy_scipy(hierarchy_df, n_groups, **kwargs):
     return fig, ax, R
 
 
-def plot_hierarchy_ete3(hierarchy_df, clusters, n_groups=3, file_path=None):
-    """
-    Parameters
-    ----------
-    hierarchy_df
-    clusters
-    n_groups : int, default=3
-        number of groups to color
-    file_path : str
-        if given, tree will be rendered as pdf
+if USE_ETE:
+    def plot_hierarchy_ete3(hierarchy_df, clusters, n_groups=3, file_path=None):
+        """
+        Parameters
+        ----------
+        hierarchy_df
+        clusters
+        n_groups : int, default=3
+            number of groups to color
+        file_path : str
+            if given, tree will be rendered as pdf
+    
+        Returns
+        -------
+        t : formatted ete3.Tree object
+        """
+        newick_string = hierarchy_to_newick(hierarchy_df, clusters, cell_leaves=True)
+        t = Tree(newick_string, format=1)
+        colors = plt.cm.hsv(np.linspace(0, 1, n_groups+1))
+        cluster_colors = [matplotlib.colors.to_hex(c) for c in colors]
+    
+        ts = TreeStyle()
+        ts.show_leaf_name=False
+        ts.scale = 1e-4
+        ts.rotation = 90
+    
+        base_style = NodeStyle()
+        base_style['size'] = 0
+        base_style['bgcolor'] = "#ffffff"
+        base_style['hz_line_width'] = 5
+        base_style['vt_line_width'] = 5
+    
+        root_node_names = [f'I{i}' for i in range(0, n_groups-1)]
+        color_index = 0
+    
+        for i in range(0, n_groups-1):
+            root_node = t.search_nodes(name=f'I{i}')[0]
+            root_node.set_style(base_style)
+            root_node.img_style['size'] = 0
+            for child in root_node.children:
+                if child.name in root_node_names:
+                    continue
+                else:
+                    color = cluster_colors[color_index]
+                    color_index += 1
+                    style = NodeStyle()
+                    style['size'] = 0
+                    style['vt_line_color'] = color
+                    style['hz_line_color'] = color
+                    style['vt_line_width'] = 3
+                    style['hz_line_width'] = 1
+    
+                    child.set_style(style)
+                    for node in child.iter_descendants():
+                        node.set_style(style)
+        if file_path:
+            t.render(file_path, tree_style=ts)
 
-    Returns
-    -------
-    t : formatted ete3.Tree object
-    """
-    newick_string = hierarchy_to_newick(hierarchy_df, clusters, cell_leaves=True)
-    t = Tree(newick_string, format=1)
-    colors = plt.cm.hsv(np.linspace(0, 1, n_groups+1))
-    cluster_colors = [matplotlib.colors.to_hex(c) for c in colors]
-
-    ts = TreeStyle()
-    ts.show_leaf_name=False
-    ts.scale = 1e-4
-    ts.rotation = 90
-
-    base_style = NodeStyle()
-    base_style['size'] = 0
-    base_style['bgcolor'] = "#ffffff"
-    base_style['hz_line_width'] = 5
-    base_style['vt_line_width'] = 5
-
-    root_node_names = [f'I{i}' for i in range(0, n_groups-1)]
-    color_index = 0
-
-    for i in range(0, n_groups-1):
-        root_node = t.search_nodes(name=f'I{i}')[0]
-        root_node.set_style(base_style)
-        root_node.img_style['size'] = 0
-        for child in root_node.children:
-            if child.name in root_node_names:
-                continue
-            else:
-                color = cluster_colors[color_index]
-                color_index += 1
-                style = NodeStyle()
-                style['size'] = 0
-                style['vt_line_color'] = color
-                style['hz_line_color'] = color
-                style['vt_line_width'] = 3
-                style['hz_line_width'] = 1
-
-                child.set_style(style)
-                for node in child.iter_descendants():
-                    node.set_style(style)
-    if file_path:
-        t.render(file_path, tree_style=ts)
-
-    return t, ts
+        return t, ts

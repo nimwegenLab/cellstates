@@ -4,7 +4,7 @@ import numpy
 NAME = 'cellstates'
 VERSION = '0.1'
 DESCR = 'Module for finding gene expression states in scRNAseq data'
-REQUIRES = ['numpy', 'pandas', 'matplotlib', 'ete3']
+REQUIRES = ['numpy', 'pandas', 'matplotlib']
 
 AUTHOR = 'Pascal Grobecker'
 EMAIL = 'pascal.grobecker@unibas.ch'
