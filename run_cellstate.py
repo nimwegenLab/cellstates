@@ -24,6 +24,9 @@ def main():
                         help='init clusters (path to file)', type=str)
     parser.add_argument('-t', '--threads', default=1,
                         help='number of threads', type=int)
+    parser.add_argument('-s', '--seed', default=1,
+                        help='seed for random generator', type=int)
+
     args = parser.parse_args()
 
     datafile = args.data
@@ -74,7 +77,7 @@ def main():
         logging.info(f'initialize clusters from {args.init} with mapping {cluster_map}')
 
     clst = Cluster(data, LAMBDA, cluster_init.copy(),
-                   num_threads=args.threads, n_cache=10000)
+                   num_threads=args.threads, n_cache=10000, seed=args.seed)
     run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL)
 
     # optimise alpha and run MCMC again if needed
