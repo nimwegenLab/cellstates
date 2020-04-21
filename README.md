@@ -68,6 +68,29 @@ It returns the following **results**:
 * `hierarchy_gene_scores.tsv`: For each merging-step in the hierarchical tree, we can give a score for how much a gene contributes to the separation of the two branches (large negative score). In this tab-separated value file, the first three columns are the same as in `cluster_hierarchy.tsv`, indicating the merging step, and the following columns are the scores for each gene. 
 * `dirichlet_pseudocounts.txt`: The prior parameters for which the optimum was found. 
 
-# Advanced uses and interpretation of results
+
+## Advanced Commandline tool
+```
+usage: run_cellstate.py [-h] [-o OUTDIR] [--data DATA] [-d DIRICHLET]
+                        [-i INIT] [-t THREADS] [-s SEED]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -o OUTDIR, --outdir OUTDIR
+                        directory for output
+  --data DATA           UMI data (path to file)
+  -d DIRICHLET, --dirichlet DIRICHLET
+                        dirichlet prior parameter
+  -i INIT, --init INIT  init clusters (path to file)
+  -t THREADS, --threads THREADS
+                        number of threads
+  -s SEED, --seed SEED  seed for random generator
+```
+Additional comments for selected parameters:
+* `DIRICHLET`: If given, the model is run only with the given parameter, otherwise the parameter will be optimized
+* `INIT`: Cluster labels should be given in a simple text file separated by line breaks or as a binary .npy file. 
+* `THREADS`: Default is one core
+
+# Python module and interpretation of results
 
 Check out the cellstate_introduction.ipynb and Example_analysis.ipynb jupyter notebooks for information about how to use the cellstates python module and how to analyse and interpret outputs.
