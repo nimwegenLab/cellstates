@@ -14,10 +14,10 @@ logging.basicConfig(format=logformat, level=getattr(logging, LOG_LEVEL))
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--outdir', default=None,
-                        help='directory for output', type=str)
-    parser.add_argument('--data', default=None,
+    parser.add_argument('data', default=None, required=True,
                         help='UMI data (path to file)', type=str)
+    parser.add_argument('-o', '--outdir', default='./',
+                        help='directory for output', type=str)
     parser.add_argument('-d', '--dirichlet', default=None,
                         help='dirichlet prior parameter', type=float)
     parser.add_argument('-i', '--init', default=None,
