@@ -14,7 +14,7 @@ logging.basicConfig(format=logformat, level=getattr(logging, LOG_LEVEL))
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('data', default=None, required=True,
+    parser.add_argument('data', default=None,
                         help='UMI data (path to file)', type=str)
     parser.add_argument('-o', '--outdir', default='./',
                         help='directory for output', type=str)
