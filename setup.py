@@ -29,8 +29,8 @@ EXTENSIONS = [Extension("cellstates.cluster",
               ]
 
 if USE_CYTHON:
-    EXTENSIONS = cythonize(EXTENSIONS)
-                           # compiler_directives={'language_level': 3})
+    EXTENSIONS = cythonize(EXTENSIONS,
+                           compiler_directives={'language_level': 3})
 
 if __name__ == '__main__':
     setup(
