@@ -1,7 +1,6 @@
-# cython: language_level=3, boundscheck=False
+#cython: language_level=3, boundscheck=False
 
 cimport cython
-# from cython cimport int
 import numpy as np
 cimport numpy as np
 from cython.parallel import prange
@@ -720,6 +719,74 @@ cdef class Cluster:
 
         return mapping
 
+    def set_dirichlet_pseudocounts(self, l, int n_cache=-1):
+        """
+        Set dirichlet pseudocounts (lambda) to new values. Optionally also set n_cache new.
+
+        Parameters
+        ----------
+        l : 1D array or float
+            If array, the new pseudo-counts lambda for each gene. Has to be of shape (N_genes, ).
+            All entries must be > 0. If float, defines the magnitude of the pseudo-counts,
+            but their relative sizes is set by data average.
+        n_cache : int, default=-1
+            Number of lgamma values to store per gene.
+            If < 0, n_cache is not changed.
+            Large values speed up calculations, but use more memory
+
+        Raises
+        ------
+        ValueError
+            when shape is mismatched to data, or values are <=0.
+        """
+        if isinstance(l, np.ndarray):
+            if self.G != l.shape[0]:
+                raise ValueError('The shapes of the data and lambda do not match')
+            elif np.any(l<=0):
+                raise ValueError('all dirichlet pseudo-counts must be >0')
+            self.LAMBDA_sum = np.sum(l)
+        else:
+            l = float(l)
+            if l <= 0.:
+                raise ValueError('dirichlet prior parameter must be > 0')
+            self.LAMBDA_sum = l
+            l = self.LAMBDA_sum*np.sum(self.umi_data, axis=1)/np.sum(self.umi_data)
+
+        self.LAMBDA = <np.ndarray[np.float_t, ndim = 1]> l
+        self.B = find_dirichlet_norm(self.LAMBDA, self.num_threads)
+        if n_cache < 0:
+            self.n_cache = n_cache
+        self._init_lgamma_cache()
+        self._init_likelihood()
+
+    def set_clusters(self, new_clusters):
+        """
+        Set clusters to new values.
+
+        Parameters
+        ----------
+        new_clusters : array-like
+            new clusters
+
+        Raises
+        ------
+        ValueError
+            when entries in new_clusters are negative or larger than
+            N_boxes
+        """
+
+        # check clusters provided is consistent with N_boxes
+        if np.max(new_clusters) >= self.N_boxes:
+            raise ValueError(
+                'all cluster labels must be smaller than max_clusters')
+        elif np.min(new_clusters) < 0:
+            raise ValueError('all cluster labels must be positive')
+        c = np.array(new_clusters, dtype=np.int32)
+
+        self._clusters = <np.ndarray[np.int32_t, ndim = 1]?> c
+        self._init_counts()
+        self._init_likelihood()
+
     def merge_clusters(self, double LL_threshold=0.,
                          int n_cluster_threshold=1):
         """
@@ -768,19 +835,13 @@ cdef class Cluster:
         delta_LL_history : list of floats
             List of change in log-likelihood associated with each merging step.
         """
-        cdef Cluster self_copy
-        self_copy = Cluster.__new__(Cluster, np.array(self.data),
-                                    np.array(self.LAMBDA),
-                                    self.clusters.copy(),
-                                    max_clusters=self.N_boxes,
-                                    n_cache=self.n_cache)
-        self_copy._lgamma_cache = self._lgamma_cache
-        self_copy.B = self.B
-        self_copy._likelihood = self.likelihood.copy()
-        self_copy._init_counts()
+        c = self.clusters.copy()
+        merge_hierarchy, delta_LL_history = \
+            merge_clusters_hierarchical(self, LL_threshold=-np.inf,
+                                        n_cluster_threshold=1)
+        self.set_clusters(c)
 
-        return merge_clusters_hierarchical(self_copy, LL_threshold=-np.inf,
-                                           n_cluster_threshold=1)
+        return merge_hierarchy, delta_LL_history
 
     cpdef void combine_two_clusters(self, int c1, int c2):
         """

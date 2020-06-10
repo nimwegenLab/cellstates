@@ -191,19 +191,17 @@ def marker_score_table(clst, hierarchy_df):
         Values indicate single gene contributions to change in log-likelihood
         of two clusters being merged - large negative values are marker genes
     """
-    data = clst.cluster_umi_counts
-    N_genes, N_boxes = data.shape
-    lmbd = clst.dirichlet_pseudocounts
-    clusters = np.arange(N_boxes)
-    clst_copy = Cluster(data, lmbd, clusters)
+    orignal_clusters = clst.clusters.copy()
 
-    score_table = np.zeros((hierarchy_df.shape[0], N_genes))
+    score_table = np.zeros((hierarchy_df.shape[0], clst.G))
     for i, row in hierarchy_df.iterrows():
         c_old, c_new = int(row.cluster_old), int(row.cluster_new)
         d = gene_contribution(clst.cluster_umi_counts[:, c_old],
-                              clst.cluster_umi_counts[:, c_new], lmbd)
+                              clst.cluster_umi_counts[:, c_new],
+                              clst.dirichlet_pseudocounts)
         score_table[i, :] = d
 
-        clst_copy.combine_two_clusters(c_new, c_old)
+        clst.combine_two_clusters(c_new, c_old)
+    clst.set_clusters(orignal_clusters)
 
     return score_table

@@ -1,3 +1,9 @@
+"""
+Python script to run basic cellstates optimization on commandline.
+Two parameters can be set inside this script:
+    LOG_LEVEL: verbosity of status information; see logging package
+    N_CACHE: number of log-gamma values stored for each gene
+"""
 from cellstates.cluster import Cluster
 from cellstates.run import run_mcmc
 from cellstates.helpers import get_hierarchy_df, marker_score_table
@@ -11,6 +17,7 @@ LOG_LEVEL='INFO'
 logformat = '%(asctime)-15s - %(levelname)s:%(message)s'
 logging.basicConfig(format=logformat, level=getattr(logging, LOG_LEVEL))
 
+N_CACHE = 10000
 
 def main():
     parser = argparse.ArgumentParser()
@@ -77,24 +84,21 @@ def main():
         logging.info(f'initialize clusters from {args.init} with mapping {cluster_map}')
 
     clst = Cluster(data, LAMBDA, cluster_init.copy(),
-                   num_threads=args.threads, n_cache=10000, seed=args.seed)
+                   num_threads=args.threads, n_cache=N_CACHE, seed=args.seed)
     run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL)
 
     # optimise alpha and run MCMC again if needed
     while find_best_alpha:
         best_alpha = alpha
         best_likelihood = clst.total_likelihood
-        max_clusters = np.max(clst.clusters)+1
-        clusters = clst.clusters.copy()
 
         # check if increasing alpha increases LL
         a = alpha
         while True:
             a = alpha*2
-            clst_trial = Cluster(data, a*LAMBDA/alpha, clusters,
-                                 max_clusters=max_clusters, n_cache=0)
-            if clst_trial.total_likelihood > best_likelihood:
-                best_likelihood = clst_trial.total_likelihood
+            clst.set_dirichlet_pseudocounts(a, n_cache=0)
+            if clst.total_likelihood > best_likelihood:
+                best_likelihood = clst.total_likelihood
                 best_alpha = a
             else:
                 break
@@ -104,26 +108,21 @@ def main():
             a = alpha
             while True:
                 a = alpha/2
-                clst_trial = Cluster(data, a*LAMBDA/alpha, clusters,
-                                     max_clusters=max_clusters, n_cache=0)
-                if clst_trial.total_likelihood > best_likelihood:
-                    best_likelihood = clst_trial.total_likelihood
+                clst.set_dirichlet_pseudocounts(a, n_cache=0)
+                if clst.total_likelihood > best_likelihood:
+                    best_likelihood = clst.total_likelihood
                     best_alpha = a
                 else:
                     break
 
+        clst.set_dirichlet_pseudocounts(best_alpha, n_cache=N_CACHE)
         # if best_alpha is different, run optimization with new value
         if best_alpha!=alpha:
             logging.info(f'run MCMC with new dirichlet prior parameter' \
                          f'alpha={best_alpha}')
-            LAMBDA = best_alpha*LAMBDA/alpha
-            alpha=best_alpha
-            clst = Cluster(data, LAMBDA, cluster_init.copy(),
-                        num_threads=args.threads, n_cache=10000)
             run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL)
         else:
             find_best_alpha=False
-
 
     logging.info('save dirichlet pseudocounts used.')
     cluster_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')

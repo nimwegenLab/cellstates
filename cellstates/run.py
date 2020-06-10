@@ -77,9 +77,7 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000,
                 logging.info('likelihood did not improve; clustering converged')
                 # revert to better clustering
 
-                #TODO: new way to revert clusters to previous state
-                clst = Cluster(clst.umi_data, clst.dirichlet_pseudocounts, best_clusters,
-                               max_clusters=np.max(best_clusters)+1)
+                clst.set_clusters(best_clusters)
                 break
 
     logging.info('optimize clusters.')
