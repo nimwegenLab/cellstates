@@ -759,7 +759,7 @@ cdef class Cluster:
         self._init_lgamma_cache()
         self._init_likelihood()
 
-    def set_clusters(self, new_clusters):
+    def set_clusters(self, new_clusters, int max_clusters=0):
         """
         Set clusters to new values.
 
@@ -767,20 +767,29 @@ cdef class Cluster:
         ----------
         new_clusters : array-like
             new clusters
+        max_clusters : int, default 0
+            Maximum number of clusters allowed (acces through item N_boxes).
+            if max_clusters=0, N_boxes=max(new_clusters)
 
         Raises
         ------
         ValueError
-            when entries in new_clusters are negative or larger than
-            N_boxes
+            when entries in new_clusters are negative
         """
 
         # check clusters provided is consistent with N_boxes
-        if np.max(new_clusters) >= self.N_boxes:
-            raise ValueError(
-                'all cluster labels must be smaller than max_clusters')
-        elif np.min(new_clusters) < 0:
+        if np.min(new_clusters) < 0:
             raise ValueError('all cluster labels must be positive')
+
+        cdef int max_label
+        max_label = np.max(new_clusters)
+
+        if max_clusters > max_label:
+            self.set_N_boxes(max_clusters)
+        else:
+            if max_label >= self.N_boxes:
+                self.set_N_boxes(max_label+1)
+
         c = np.array(new_clusters, dtype=np.int32)
 
         self._clusters = <np.ndarray[np.int32_t, ndim = 1]?> c
