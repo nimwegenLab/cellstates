@@ -148,17 +148,28 @@ def main():
     cluster_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')
     np.savetxt(cluster_file, clst.dirichlet_pseudocounts)
 
-    logging.info('save clusters as optimized_clusters.txt')
-    cluster_file = os.path.join(args.outdir, 'optimized_clusters.txt')
-    np.savetxt(cluster_file, clst.clusters, fmt='%i')
-
     logging.info('get cluster hierarchy.')
     hierarchy_file = os.path.join(args.outdir, 'cluster_hierarchy.tsv')
     cluster_hierarchy, delta_LL_history = clst.get_cluster_hierarchy()
 
+    # sometimes clusters still need to be merged
+    # find maximum in total LL change after each merge
+    total_delta = np.cumsum(delta_LL_history)
+    a_max = np.argmax(total_delta)
+    # do optimal merges if they increase total LL
+    if total_delta[a_max] > 0.:
+        for c1, c2 in cluster_hierarchy[:a_max+1]:
+            clst.combine_two_clusters(c1, c2)
+        cluster_hierarchy = cluster_hierarchy[a_max+1:]
+        delta_LL_history = delta_LL_history[a_max+1:]
+
     hierarchy_df = get_hierarchy_df(cluster_hierarchy, delta_LL_history)
     logging.info('save cluster hierarchy as cluster_hierarchy.tsv')
     hierarchy_df.to_csv(hierarchy_file, sep='\t', index=None)
+
+    logging.info('save clusters as optimized_clusters.txt')
+    cluster_file = os.path.join(args.outdir, 'optimized_clusters.txt')
+    np.savetxt(cluster_file, clst.clusters, fmt='%i')
 
     logging.info('get marker gene scores')
     score_table = marker_score_table(clst, hierarchy_df)
