@@ -1,8 +1,9 @@
 """
 Python script to run basic cellstates optimization on commandline.
-Two parameters can be set inside this script:
+Three parameters can be set inside this script:
     LOG_LEVEL: verbosity of status information; see logging package
     N_CACHE: number of log-gamma values stored for each gene
+    TPS: tries per step in MCMC optimization
 """
 from cellstates.cluster import Cluster
 from cellstates.run import run_mcmc
@@ -13,11 +14,12 @@ import argparse
 import logging
 import os
 
-LOG_LEVEL='INFO'
+LOG_LEVEL='WARNING'
 logformat = '%(asctime)-15s - %(levelname)s:%(message)s'
 logging.basicConfig(format=logformat, level=getattr(logging, LOG_LEVEL))
 
 N_CACHE = 10000
+TPS = 1000  # tries_per_step in run_mcmc function
 
 def main():
     parser = argparse.ArgumentParser()
@@ -27,6 +29,8 @@ def main():
                         help='directory for output', type=str)
     parser.add_argument('-d', '--dirichlet', default=None,
                         help='dirichlet prior parameter', type=float)
+    parser.add_argument('--optimize_dirichlet', action='store_true',
+                        help='whether to optimize the dirichlet prior')
     parser.add_argument('-i', '--init', default=None,
                         help='init clusters (path to file)', type=str)
     parser.add_argument('-t', '--threads', default=1,
@@ -39,8 +43,12 @@ def main():
     datafile = args.data
     filetype=datafile.split('.')[-1]
 
-    if filetype in ['txt', 'tsv', 'zip', 'gz', 'bz2', 'xz']:
-        df = pd.read_csv(datafile, sep='\t', header=0, index_col=0)
+    if filetype in ['txt', 'tsv', 'zip', 'gz', 'bz2', 'xz', 'csv']:
+        df = pd.read_csv(datafile, delim_whitespace=True, header=0, index_col=0)
+        if df.shape[1]==1:
+            # if above fails, use slower method and infer delimiter
+            df = pd.read_csv(datafile, sep=None, header=0, index_col=0,
+                             engine='python')
         df = df.astype(np.int, copy=False)
         genes = df.index.values
         data = df.values
@@ -48,16 +56,20 @@ def main():
         data = np.load(datafile)
         data = data.astype(np.int, copy=False)
         genes = np.arange(data.shape[0], dtype=int)
+    elif filetype=='mtx':
+        import scipy.io as sio
+        data = sio.mmread(datafile).toarray()
+        genes = np.arange(data.shape[0], dtype=int)
     else:
         raise ValueError('filetype not recognized')
 
     if args.dirichlet is None:
-        find_best_alpha=True
         alpha = 2**(np.round(np.log2(data.sum()/data.shape[1])))
     else:
         alpha = args.dirichlet
         if alpha <= 0:
             raise ValueError('dirichlet prior parameter must be > 0')
+    find_best_alpha = args.optimize_dirichlet
 
     logging.info(f'writing to directory {args.outdir}')
 
@@ -85,7 +97,7 @@ def main():
 
     clst = Cluster(data, LAMBDA, cluster_init.copy(),
                    num_threads=args.threads, n_cache=N_CACHE, seed=args.seed)
-    run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL)
+    run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)
 
     # optimise alpha and run MCMC again if needed
     while find_best_alpha:
@@ -94,9 +106,11 @@ def main():
 
         # check if increasing alpha increases LL
         a = alpha
+        logging.info(f'alpha={a}, total_likelihood={clst.total_likelihood}')
         while True:
-            a = alpha*2
+            a = a*2
             clst.set_dirichlet_pseudocounts(a, n_cache=0)
+            logging.info(f'alpha={a}, total_likelihood={clst.total_likelihood}')
             if clst.total_likelihood > best_likelihood:
                 best_likelihood = clst.total_likelihood
                 best_alpha = a
@@ -107,8 +121,9 @@ def main():
         if best_alpha==alpha:
             a = alpha
             while True:
-                a = alpha/2
+                a = a/2
                 clst.set_dirichlet_pseudocounts(a, n_cache=0)
+                logging.info(f'alpha={a}, total_likelihood={clst.total_likelihood}')
                 if clst.total_likelihood > best_likelihood:
                     best_likelihood = clst.total_likelihood
                     best_alpha = a
@@ -116,12 +131,17 @@ def main():
                     break
 
         clst.set_dirichlet_pseudocounts(best_alpha, n_cache=N_CACHE)
+        logging.info(f'alpha={best_alpha}, total_likelihood={clst.total_likelihood}')
         # if best_alpha is different, run optimization with new value
         if best_alpha!=alpha:
-            logging.info(f'run MCMC with new dirichlet prior parameter' \
+            logging.info(f'run MCMC with new dirichlet prior parameter ' \
                          f'alpha={best_alpha}')
-            run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL)
+            clst.set_clusters(cluster_init.copy())
+            run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)
+            alpha = best_alpha
         else:
+            logging.info(f'optimal dirichlet prior parameter is ' \
+                         f'alpha={best_alpha}')
             find_best_alpha=False
 
     logging.info('save dirichlet pseudocounts used.')
