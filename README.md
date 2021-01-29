@@ -52,28 +52,30 @@ CC=g++-9 python setup.py build_ext --inplace
 # Commandline tool
 The most **basic version**, can be run through the command line as follows:
 
-`python run_cellstate.py --data data.tsv`
+`python run_cellstates.py data.tsv`
 
 The **input** is a table of integer UMI counts. The commandline tool currently supports the following formats:
-* A tab-separated values file with .tsv or .txt ending. Columns are cells, rows are genes. 
+* A tab-separated values file with .tsv or .txt ending. Columns are cells, rows are genes. CSV-files (.csv) or compressed files recognized by pandas read\_csv method should work too. 
 * A numpy array of integers saved as .npy file
+* Matrix Market .mtx file
 
 
 It returns the following **results**:
 * `optimized_clusters.txt`: indicates for each cell in which cell-state they are (cellstates are assigned an arbitrary number)
 * `cluster_hierarchy.tsv`: The relationship between cell-states can be described through a hierarchical tree. Leaves in this tree are cell-states which are iteratively merged into higher-order clusters. This tree structure is saved as a tab separated value file with three columns:
-    * cluster_new: Cluster/cell-state to be merged and label of new merged cluster
-    * cluster_old: Other cluster/cell-state to be merged with cluster_new
-    * Delta_LL: Change in log-likelihood (usually negative; the more negative, the more different are the merged clusters)
+    * cluster\_new: Cluster/cell-state to be merged and label of new merged cluster
+    * cluster\_old: Other cluster/cell-state to be merged with cluster\_new
+    * Delta\_LL: Change in log-likelihood (usually negative; the more negative, the more different are the merged clusters)
 * `hierarchy_gene_scores.tsv`: For each merging-step in the hierarchical tree, we can give a score for how much a gene contributes to the separation of the two branches (large negative score). In this tab-separated value file, the first three columns are the same as in `cluster_hierarchy.tsv`, indicating the merging step, and the following columns are the scores for each gene. 
 * `dirichlet_pseudocounts.txt`: The prior parameters for which the optimum was found. 
 
 
 ## Advanced Commandline tool
 ```
-usage: run_cellstate.py [-h] [-o OUTDIR] [-d DIRICHLET] [-i INIT] [-t THREADS]
-                        [-s SEED]
-                        data
+usage: run_cellstates.py [-h] [-o OUTDIR] [-d DIRICHLET]
+                         [--optimize_dirichlet] [-i INIT] [-t THREADS]
+                         [-s SEED]
+                         data
 
 positional arguments:
   data                  UMI data (path to file)
@@ -84,16 +86,16 @@ optional arguments:
                         directory for output
   -d DIRICHLET, --dirichlet DIRICHLET
                         dirichlet prior parameter
+  --optimize_dirichlet  whether to optimize the dirichlet prior
   -i INIT, --init INIT  init clusters (path to file)
   -t THREADS, --threads THREADS
                         number of threads
   -s SEED, --seed SEED  seed for random generator
 ```
 Additional comments for selected parameters:
-* `DIRICHLET`: If given, the model is run only with the given parameter, otherwise the parameter will be optimized
 * `INIT`: Cluster labels should be given in a simple text file separated by line breaks or as a binary .npy file. 
 * `THREADS`: Default is one core
 
 # Python module and interpretation of results
 
-Check out the cellstate_introduction.ipynb and Example_analysis.ipynb jupyter notebooks for information about how to use the cellstates python module and how to analyse and interpret outputs.
+Check out the cellstate\_introduction.ipynb and Example_analysis.ipynb jupyter notebooks for information about how to use the cellstates python module and how to analyse and interpret outputs.
