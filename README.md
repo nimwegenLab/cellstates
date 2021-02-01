@@ -19,7 +19,9 @@ A C-compiler with **OpenMP** is required for installation. See below for possibl
 
 **Python packages**
 Mandatory: numpy, pandas, matplotlib, scipy
+
 Strongly recommended: Cython
+
 Recommended for plotting of hierarchies: [ete3](http://etetoolkit.org/)
 
 ## MacOS
@@ -52,7 +54,7 @@ CC=g++-9 python setup.py build_ext --inplace
 # Commandline tool
 The most **basic version**, can be run through the command line as follows:
 
-`python run_cellstates.py data.tsv`
+`python ./scripts/run_cellstates.py data.tsv`
 
 The **input** is a table of integer UMI counts. The commandline tool currently supports the following formats:
 * A tab-separated values file with .tsv or .txt ending. Columns are cells, rows are genes. CSV-files (.csv) or compressed files recognized by pandas read\_csv method should work too. 
