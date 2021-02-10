@@ -90,12 +90,15 @@ optional arguments:
                         dirichlet prior parameter
   --optimize_dirichlet  whether to optimize the dirichlet prior
   -i INIT, --init INIT  init clusters (path to file)
+  -g GENES, --genes GENES
+                        gene names (path to file)
   -t THREADS, --threads THREADS
                         number of threads
   -s SEED, --seed SEED  seed for random generator
 ```
 Additional comments for selected parameters:
 * `INIT`: Cluster labels should be given in a simple text file separated by line breaks or as a binary .npy file. 
+* `GENES`: list of gene names should be given in a simple text file separated by line breaks.
 * `THREADS`: Default is one core
 
 # Python module and interpretation of results

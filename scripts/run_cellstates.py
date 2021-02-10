@@ -33,6 +33,8 @@ def main():
                         help='whether to optimize the dirichlet prior')
     parser.add_argument('-i', '--init', default=None,
                         help='init clusters (path to file)', type=str)
+    parser.add_argument('-g', '--genes', default=None,
+                        help='gene names (path to file)', type=str)
     parser.add_argument('-t', '--threads', default=1,
                         help='number of threads', type=int)
     parser.add_argument('-s', '--seed', default=1,
@@ -62,6 +64,9 @@ def main():
         genes = np.arange(data.shape[0], dtype=int)
     else:
         raise ValueError('filetype not recognized')
+
+    if args.genes is not None:
+        genes = np.loadtxt(args.genes, dtype=str)
 
     if args.dirichlet is None:
         alpha = 2**(np.round(np.log2(data.sum()/data.shape[1])))
