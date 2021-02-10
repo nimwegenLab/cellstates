@@ -754,7 +754,7 @@ cdef class Cluster:
 
         self.LAMBDA = <np.ndarray[np.float_t, ndim = 1]> l
         self.B = find_dirichlet_norm(self.LAMBDA, self.num_threads)
-        if n_cache < 0:
+        if n_cache > 0:
             self.n_cache = n_cache
         self._init_lgamma_cache()
         self._init_likelihood()
