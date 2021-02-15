@@ -168,6 +168,11 @@ def main():
         cluster_hierarchy = cluster_hierarchy[a_max+1:]
         delta_LL_history = delta_LL_history[a_max+1:]
 
+        # re-map cluster names
+        cluster_map = clst.set_N_boxes(clst.n_clusters)
+        reverse_map = {v:k for k,v in cluster_map.items()}
+        cluster_hierarchy = np.vectorize(reverse_map.__getitem__)(cluster_hierarchy)
+
     hierarchy_df = get_hierarchy_df(cluster_hierarchy, delta_LL_history)
     logging.info('save cluster hierarchy as cluster_hierarchy.tsv')
     hierarchy_df.to_csv(hierarchy_file, sep='\t', index=None)

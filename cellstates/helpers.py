@@ -89,9 +89,21 @@ def hierarchy_to_newick(hierarchy_df, clusters,
     newick_string = cluster_string_dict[c_low] + ';'
     return newick_string
 
-def get_scipy_hierarchy(hierarchy_df):
+def get_scipy_hierarchy(hierarchy_df, return_labels=False):
     """
     function to get scipy.cluster.hierarchy linkage matrix
+
+    Parameters
+    ----------
+    hierachy_df : DataFrame containing cluster merges
+    return_labels : whether to return leaf labels
+
+    Returns
+    -------
+    Z : ndarray
+        scipy linkage matrix
+    labels : 1D array, optional
+        leaf labels that can be used in scipy dendrogram
     """
     N_steps = hierarchy_df.shape[0]
     delta_LL_history = - hierarchy_df.delta_LL.values
@@ -105,8 +117,9 @@ def get_scipy_hierarchy(hierarchy_df):
 
     Z = np.zeros((N_steps, 4))
     Z[:, 2] = delta_LL_history + delta_LL_offset
-    clustersize = np.ones(N_steps+1)
-    clusterindex = np.arange(N_steps+1)
+    cluster_names = np.unique(hierarchy_df.iloc[:, :2]).astype(int)
+    clusterindex = dict(zip(cluster_names, range(N_steps+1)))
+    clustersize = dict(zip(cluster_names, range(N_steps+1)))
     for i, row in hierarchy_df.iterrows():
         idx_old, idx_new = int(row.cluster_old), int(row.cluster_new)
         cs = clustersize[idx_old] + clustersize[idx_new]
@@ -120,7 +133,11 @@ def get_scipy_hierarchy(hierarchy_df):
 
         clusterindex[idx_new] = N_steps + 1 + i
         clusterindex[idx_old] = -1
-    return Z
+
+    if return_labels:
+        return Z, cluster_names
+    else:
+        return Z
 
 
 def clusters_from_hierarchy(hierarchy_df, cluster_init=None, steps=None):
