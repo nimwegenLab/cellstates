@@ -3,7 +3,7 @@ from .helpers import clusters_from_hierarchy, get_hierarchy_df, get_scipy_hierar
 from .helpers import marker_score_table
 from .plotting import plot_hierarchy_scipy
 try:
-    from .plotting import plot_hierarchy_ete3, plot_hierarchy_ete3_cellstates
+    from .plotting import plot_hierarchy_ete3
 except ImportError:
     pass
 from .run import run_mcmc
