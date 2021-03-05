@@ -42,6 +42,7 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000,
     logging.info(f'n_clusters={clst.n_clusters}, ' \
                  f'total likelihood={clst.total_likelihood}')
     old_likelihood = clst.total_likelihood
+    best_clusters = clst.clusters.copy()
 
     while i < 10000:
         i += 1
@@ -56,7 +57,7 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000,
             #N_batch = N_batch*10
             tries_per_step *= 10
             N_steps = N_steps//10
-            logging.warn(err)
+            logging.info(err)
             if N_steps < 10:
                 logging.info('MCMC converges, little further improvement expected')
                 break

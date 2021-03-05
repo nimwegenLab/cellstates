@@ -61,7 +61,7 @@ def plot_hierarchy_scipy(hierarchy_df, n_groups=2,
 
     R = dendrogram(Z, color_threshold=None, #Z[-n_groups+1, 2])
                    link_color_func=lambda x: link_cols[x],
-                   labels=labels,
+                   labels=list(labels),
                    **kwargs)
     return R
 
