@@ -64,15 +64,15 @@ def hierarchy_to_newick(hierarchy_df, clusters,
     if distance:
         distances = np.cumsum(np.where( (hierarchy_df.delta_LL >= 0) , 1, -hierarchy_df.delta_LL + 1))
 
+    # use index i instead of step in case hierarchy_df.index is non-standard
     i = hierarchy_df.shape[0] - 1
-
     for step, row in hierarchy_df.iterrows():
         c_old = row.cluster_old
         c_new = row.cluster_new
         s_old = cluster_string_dict[c_old]
         s_new = cluster_string_dict[c_new]
         if distance:
-            d = distances[step]
+            d = distances[-i-1]
             d_old = cluster_distance[c_old]
             d_new = cluster_distance[c_new]
             cluster_string_new = f'({s_new}:{d-d_new},{s_old}:{d-d_old})I{i}'
