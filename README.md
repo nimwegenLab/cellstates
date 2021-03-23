@@ -62,7 +62,6 @@ The commandline tool currently supports the following formats:
 * A tab-separated values file with .tsv or .txt ending. Columns are cells, rows are genes. CSV-files (.csv) or compressed files recognized by pandas read\_csv method should work too. 
 * A numpy array of integers saved as .npy file
 * Matrix Market .mtx file
-If multiple files are given, the data tables will be concatenated under the assumption that all rows correspond to the same genes
 
 
 It returns the following **results**:
