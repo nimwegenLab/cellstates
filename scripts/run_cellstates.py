@@ -23,7 +23,7 @@ TPS = 1000  # tries_per_step in run_mcmc function
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('data', default=None,
+    parser.add_argument('data', default=None, nargs='+',
                         help='UMI data (path to file)', type=str)
     parser.add_argument('-o', '--outdir', default='./',
                         help='directory for output', type=str)
@@ -35,6 +35,8 @@ def main():
                         help='init clusters (path to file)', type=str)
     parser.add_argument('-g', '--genes', default=None,
                         help='gene names (path to file)', type=str)
+    parser.add_argument('-c', '--cells', default=None, nargs='*',
+                        help='cell names/barcodes (path to file)', type=str)
     parser.add_argument('-t', '--threads', default=1,
                         help='number of threads', type=int)
     parser.add_argument('-s', '--seed', default=1,
@@ -42,31 +44,43 @@ def main():
 
     args = parser.parse_args()
 
-    datafile = args.data
-    filetype=datafile.split('.')[-1]
+    datafiles = args.data
+    all_data = []
+    all_cells = []
+    genes = None
+    for datafile in datafiles:
+        filetype=datafile.split('.')[-1]
+        filename=datafile.split('.')[:-1]
 
-    if filetype in ['txt', 'tsv', 'zip', 'gz', 'bz2', 'xz', 'csv']:
-        df = pd.read_csv(datafile, delim_whitespace=True, header=0, index_col=0)
-        if df.shape[1]==1:
-            # if above fails, use slower method and infer delimiter
-            df = pd.read_csv(datafile, sep=None, header=0, index_col=0,
-                             engine='python')
-        df = df.astype(np.int, copy=False)
-        genes = df.index.values
-        data = df.values
-    elif filetype=='npy':
-        data = np.load(datafile)
-        data = data.astype(np.int, copy=False)
-        genes = np.arange(data.shape[0], dtype=int)
-    elif filetype=='mtx':
-        import scipy.io as sio
-        data = sio.mmread(datafile).toarray()
-        genes = np.arange(data.shape[0], dtype=int)
-    else:
-        raise ValueError('filetype not recognized')
+        if filetype in ['txt', 'tsv', 'zip', 'gz', 'bz2', 'xz', 'csv']:
+            df = pd.read_csv(datafile, delim_whitespace=True, header=0, index_col=0)
+            if df.shape[1]==1:
+                # if above fails, use slower method and infer delimiter
+                df = pd.read_csv(datafile, sep=None, header=0, index_col=0,
+                                engine='python')
+            df = df.astype(np.int, copy=False)
+            genes = df.index.values
+            cells = df.columns.values
+            data = df.values
+        elif filetype=='npy':
+            data = np.load(datafile)
+            data = data.astype(np.int, copy=False)
+            cells = [f'{filename}-cell_{i}' for i in range(data.shape[1])]
+        elif filetype=='mtx':
+            import scipy.io as sio
+            data = sio.mmread(datafile).toarray()
+            cells = [f'{filename}-cell_{i}' for i in range(data.shape[1])]
+        else:
+            raise ValueError('filetype not recognized', datafile)
+        all_data.append(data)
+        all_cells.append(cells)
+    data = np.concatenate(all_data, axis=1)
+    cells = np.concatenate(all_cells)
 
     if args.genes is not None:
         genes = np.loadtxt(args.genes, dtype=str)
+    elif genes is None:
+        genes = np.arange(data.shape[0], dtype=int)
 
     if args.dirichlet is None:
         alpha = 2**(np.round(np.log2(data.sum()/data.shape[1])))
@@ -176,6 +190,10 @@ def main():
     hierarchy_df = get_hierarchy_df(cluster_hierarchy, delta_LL_history)
     logging.info('save cluster hierarchy as cluster_hierarchy.tsv')
     hierarchy_df.to_csv(hierarchy_file, sep='\t', index=None)
+
+    logging.info('save cell names')
+    cellfile = os.path.join(args.outdir, 'CellID.txt')
+    np.savetxt(cellfile, cells, fmt='%s')
 
     logging.info('save clusters as optimized_clusters.txt')
     cluster_file = os.path.join(args.outdir, 'optimized_clusters.txt')
