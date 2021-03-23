@@ -56,7 +56,9 @@ The most **basic version**, can be run through the command line as follows:
 
 `python ./scripts/run_cellstates.py data.tsv`
 
-The **input** is a table of integer UMI counts. The commandline tool currently supports the following formats:
+The **input** is a table of integer UMI counts. 
+If multiple files are given, the data tables will be concatenated under the assumption that all rows correspond to the same genes.
+The commandline tool currently supports the following formats:
 * A tab-separated values file with .tsv or .txt ending. Columns are cells, rows are genes. CSV-files (.csv) or compressed files recognized by pandas read\_csv method should work too. 
 * A numpy array of integers saved as .npy file
 * Matrix Market .mtx file
@@ -70,14 +72,15 @@ It returns the following **results**:
     * Delta\_LL: Change in log-likelihood (usually negative; the more negative, the more different are the merged clusters)
 * `hierarchy_gene_scores.tsv`: For each merging-step in the hierarchical tree, we can give a score for how much a gene contributes to the separation of the two branches (large negative score). In this tab-separated value file, the first three columns are the same as in `cluster_hierarchy.tsv`, indicating the merging step, and the following columns are the scores for each gene. 
 * `dirichlet_pseudocounts.txt`: The prior parameters for which the optimum was found. 
+* `CellID.txt` list of cell names/barcodes of the concatenated data table
 
 
 ## Advanced Commandline tool
 ```
 usage: run_cellstates.py [-h] [-o OUTDIR] [-d DIRICHLET]
-                         [--optimize_dirichlet] [-i INIT] [-t THREADS]
-                         [-s SEED]
-                         data
+                         [--optimize_dirichlet] [-i INIT] [-g GENES]
+                         [-c [CELLS [CELLS ...]]] [-t THREADS] [-s SEED]
+                         data [data ...]
 
 positional arguments:
   data                  UMI data (path to file)
@@ -92,6 +95,8 @@ optional arguments:
   -i INIT, --init INIT  init clusters (path to file)
   -g GENES, --genes GENES
                         gene names (path to file)
+  -c [CELLS [CELLS ...]], --cells [CELLS [CELLS ...]]
+                        cell names/barcodes (path to file)
   -t THREADS, --threads THREADS
                         number of threads
   -s SEED, --seed SEED  seed for random generator
@@ -99,6 +104,7 @@ optional arguments:
 Additional comments for selected parameters:
 * `INIT`: Cluster labels should be given in a simple text file separated by line breaks or as a binary .npy file. 
 * `GENES`: list of gene names should be given in a simple text file separated by line breaks.
+* `CELLS`: list of cell names/barcodes should be given in a simple text file separated by line breaks. Multiple files can be given if there are multiple data files.
 * `THREADS`: Default is one core
 
 # Python module and interpretation of results
