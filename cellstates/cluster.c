@@ -1248,7 +1248,7 @@ struct __pyx_opt_args_10cellstates_7cluster_7Cluster_optimal_move;
 struct __pyx_opt_args_10cellstates_7cluster_merge_two_clusters;
 struct __pyx_opt_args_10cellstates_7cluster_do_biased_mc_moves;
 
-/* "cellstates/cluster.pxd":38
+/* "cellstates/cluster.pxd":40
  *     cdef void _init_likelihood(self)
  *     cpdef void combine_two_clusters(self, int c1, int c2)
  *     cpdef get_best_move(self, int m, move_to=*)             # <<<<<<<<<<<<<<
@@ -1260,7 +1260,7 @@ struct __pyx_opt_args_10cellstates_7cluster_7Cluster_get_best_move {
   PyObject *move_to;
 };
 
-/* "cellstates/cluster.pxd":39
+/* "cellstates/cluster.pxd":41
  *     cpdef void combine_two_clusters(self, int c1, int c2)
  *     cpdef get_best_move(self, int m, move_to=*)
  *     cpdef int optimal_move(self, int m, move_to=*)             # <<<<<<<<<<<<<<
@@ -1295,8 +1295,8 @@ struct __pyx_opt_args_10cellstates_7cluster_do_biased_mc_moves {
   int tries_per_step;
 };
 
-/* "cellstates/cluster.pxd":13
- * cdef double MIN_EXP_ARG = log(DBL_MIN)
+/* "cellstates/cluster.pxd":15
+ * cdef double find_cluster_distance(Cluster clst, int i, int j)
  * 
  * cdef class Cluster:             # <<<<<<<<<<<<<<
  *     cdef readonly:
@@ -2325,6 +2325,9 @@ static CYTHON_INLINE int __Pyx_PyObject_SetAttrStr(PyObject* obj, PyObject* attr
 /* VoidPtrExport.proto */
 static int __Pyx_ExportVoidPtr(PyObject *name, void *p, const char *sig);
 
+/* FunctionExport.proto */
+static int __Pyx_ExportFunction(const char *name, void (*f)(void), const char *sig);
+
 /* InitStrings.proto */
 static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 
@@ -2398,6 +2401,7 @@ static PyObject *contiguous = 0;
 static PyObject *indirect_contiguous = 0;
 static int __pyx_memoryview_thread_locks_used;
 static PyThread_type_lock __pyx_memoryview_thread_locks[8];
+static double __pyx_f_10cellstates_7cluster_find_cluster_distance(struct __pyx_obj_10cellstates_7cluster_Cluster *, int, int); /*proto*/
 static double __pyx_f_10cellstates_7cluster_randnum(void); /*proto*/
 static int __pyx_f_10cellstates_7cluster_randint(int); /*proto*/
 static double __pyx_f_10cellstates_7cluster_lgamma_cache(__Pyx_memviewslice, int, long); /*proto*/
@@ -2405,7 +2409,6 @@ static double __pyx_f_10cellstates_7cluster_find_dirichlet_norm(__Pyx_memviewsli
 static double __pyx_f_10cellstates_7cluster_find_LL_c_old(struct __pyx_obj_10cellstates_7cluster_Cluster *, int); /*proto*/
 static double __pyx_f_10cellstates_7cluster_find_LL_c_new(struct __pyx_obj_10cellstates_7cluster_Cluster *, int, int); /*proto*/
 static double __pyx_f_10cellstates_7cluster_find_cluster_LL(struct __pyx_obj_10cellstates_7cluster_Cluster *, int); /*proto*/
-static double __pyx_f_10cellstates_7cluster_find_cluster_distance(struct __pyx_obj_10cellstates_7cluster_Cluster *, int, int); /*proto*/
 static void __pyx_f_10cellstates_7cluster_move_cell_nocalc(struct __pyx_obj_10cellstates_7cluster_Cluster *, int, int, double, double); /*proto*/
 static void __pyx_f_10cellstates_7cluster_move_cell(struct __pyx_obj_10cellstates_7cluster_Cluster *, int, int); /*proto*/
 static void __pyx_f_10cellstates_7cluster_merge_two_clusters(struct __pyx_obj_10cellstates_7cluster_Cluster *, int, int, struct __pyx_opt_args_10cellstates_7cluster_merge_two_clusters *__pyx_optional_args); /*proto*/
@@ -15219,7 +15222,7 @@ static PyObject *__pyx_pf_10cellstates_7cluster_7Cluster_5genes___get__(struct _
   return __pyx_r;
 }
 
-/* "cellstates/cluster.pxd":15
+/* "cellstates/cluster.pxd":17
  * cdef class Cluster:
  *     cdef readonly:
  *         int G  # number of genes             # <<<<<<<<<<<<<<
@@ -15249,7 +15252,7 @@ static PyObject *__pyx_pf_10cellstates_7cluster_7Cluster_1G___get__(struct __pyx
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->G); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 15, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->G); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 17, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -15266,7 +15269,7 @@ static PyObject *__pyx_pf_10cellstates_7cluster_7Cluster_1G___get__(struct __pyx
   return __pyx_r;
 }
 
-/* "cellstates/cluster.pxd":16
+/* "cellstates/cluster.pxd":18
  *     cdef readonly:
  *         int G  # number of genes
  *         int N_samples  # number of cells             # <<<<<<<<<<<<<<
@@ -15296,7 +15299,7 @@ static PyObject *__pyx_pf_10cellstates_7cluster_7Cluster_9N_samples___get__(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->N_samples); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 16, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->N_samples); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 18, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -15313,7 +15316,7 @@ static PyObject *__pyx_pf_10cellstates_7cluster_7Cluster_9N_samples___get__(stru
   return __pyx_r;
 }
 
-/* "cellstates/cluster.pxd":17
+/* "cellstates/cluster.pxd":19
  *         int G  # number of genes
  *         int N_samples  # number of cells
  *         int N_boxes  # number of possible clusters             # <<<<<<<<<<<<<<
@@ -15343,7 +15346,7 @@ static PyObject *__pyx_pf_10cellstates_7cluster_7Cluster_7N_boxes___get__(struct
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->N_boxes); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 17, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->N_boxes); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 19, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -31053,10 +31056,17 @@ static int __Pyx_modinit_variable_export_code(void) {
 
 static int __Pyx_modinit_function_export_code(void) {
   __Pyx_RefNannyDeclarations
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__Pyx_modinit_function_export_code", 0);
   /*--- Function export code ---*/
+  if (__Pyx_ExportFunction("find_cluster_distance", (void (*)(void))__pyx_f_10cellstates_7cluster_find_cluster_distance, "double (struct __pyx_obj_10cellstates_7cluster_Cluster *, int, int)") < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
+  __pyx_L1_error:;
+  __Pyx_RefNannyFinishContext();
+  return -1;
 }
 
 static int __Pyx_modinit_type_init_code(void) {
@@ -31392,7 +31402,7 @@ if (!__Pyx_RefNanny) {
   /*--- Global type/function init code ---*/
   (void)__Pyx_modinit_global_init_code();
   if (unlikely(__Pyx_modinit_variable_export_code() < 0)) __PYX_ERR(0, 1, __pyx_L1_error)
-  (void)__Pyx_modinit_function_export_code();
+  if (unlikely(__Pyx_modinit_function_export_code() < 0)) __PYX_ERR(0, 1, __pyx_L1_error)
   if (unlikely(__Pyx_modinit_type_init_code() < 0)) __PYX_ERR(0, 1, __pyx_L1_error)
   if (unlikely(__Pyx_modinit_type_import_code() < 0)) __PYX_ERR(0, 1, __pyx_L1_error)
   (void)__Pyx_modinit_variable_import_code();
@@ -36971,6 +36981,43 @@ static CYTHON_INLINE int __Pyx_PyObject_SetAttrStr(PyObject* obj, PyObject* attr
     if (!cobj)
         goto bad;
     if (PyDict_SetItem(d, name, cobj) < 0)
+        goto bad;
+    Py_DECREF(cobj);
+    Py_DECREF(d);
+    return 0;
+bad:
+    Py_XDECREF(cobj);
+    Py_XDECREF(d);
+    return -1;
+}
+
+/* FunctionExport */
+      static int __Pyx_ExportFunction(const char *name, void (*f)(void), const char *sig) {
+    PyObject *d = 0;
+    PyObject *cobj = 0;
+    union {
+        void (*fp)(void);
+        void *p;
+    } tmp;
+    d = PyObject_GetAttrString(__pyx_m, (char *)"__pyx_capi__");
+    if (!d) {
+        PyErr_Clear();
+        d = PyDict_New();
+        if (!d)
+            goto bad;
+        Py_INCREF(d);
+        if (PyModule_AddObject(__pyx_m, (char *)"__pyx_capi__", d) < 0)
+            goto bad;
+    }
+    tmp.fp = f;
+#if PY_VERSION_HEX >= 0x02070000
+    cobj = PyCapsule_New(tmp.p, sig, 0);
+#else
+    cobj = PyCObject_FromVoidPtrAndDesc(tmp.p, (void *)sig, 0);
+#endif
+    if (!cobj)
+        goto bad;
+    if (PyDict_SetItemString(d, name, cobj) < 0)
         goto bad;
     Py_DECREF(cobj);
     Py_DECREF(d);

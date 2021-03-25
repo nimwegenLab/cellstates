@@ -10,6 +10,8 @@ cdef extern from "limits.h":
 
 cdef double MIN_EXP_ARG = log(DBL_MIN)
 
+cdef double find_cluster_distance(Cluster clst, int i, int j)
+
 cdef class Cluster:
     cdef readonly:
         int G  # number of genes
