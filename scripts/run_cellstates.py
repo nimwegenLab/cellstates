@@ -59,13 +59,11 @@ def main():
                 # if above fails, use slower method and infer delimiter
                 df = pd.read_csv(datafile, sep=None, header=0, index_col=0,
                                 engine='python')
-            df = df.astype(np.int, copy=False)
             genes = df.index.values
             cells = df.columns.values
             data = df.values
         elif filetype=='npy':
             data = np.load(datafile)
-            data = data.astype(np.int, copy=False)
             cells = [f'{filename}-cell_{i}' for i in range(data.shape[1])]
         elif filetype=='mtx':
             import scipy.io as sio
@@ -73,6 +71,9 @@ def main():
             cells = [f'{filename}-cell_{i}' for i in range(data.shape[1])]
         else:
             raise ValueError('filetype not recognized', datafile)
+        if np.issubtype(data.dtype, np.floating):
+            data = data.rint(data, out=data)
+        data = data.astype(np.int64, copy=False)
         all_data.append(data)
         all_cells.append(cells)
     data = np.concatenate(all_data, axis=1)
@@ -109,7 +110,7 @@ def main():
     G, N = data.shape
 
     if args.init is None:
-        cluster_init = np.arange(N, dtype=np.int)
+        cluster_init = np.arange(N, dtype=np.int32)
         logging.info('initialize clusters with all cells seperate')
     elif args.init.endswith('.npy'):
         cluster_init = np.load(args.init)
