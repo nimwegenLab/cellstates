@@ -72,7 +72,7 @@ def main():
         else:
             raise ValueError('filetype not recognized', datafile)
         if np.issubdtype(data.dtype, np.floating):
-            data = data.rint(data, out=data)
+            data = np.rint(data)
         data = data.astype(np.int64, copy=False)
         all_data.append(data)
         all_cells.append(cells)
