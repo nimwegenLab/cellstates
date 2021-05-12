@@ -71,7 +71,7 @@ def main():
             cells = [f'{filename}-cell_{i}' for i in range(data.shape[1])]
         else:
             raise ValueError('filetype not recognized', datafile)
-        if np.issubtype(data.dtype, np.floating):
+        if np.issubdtype(data.dtype, np.floating):
             data = data.rint(data, out=data)
         data = data.astype(np.int64, copy=False)
         all_data.append(data)
