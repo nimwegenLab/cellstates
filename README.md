@@ -4,14 +4,16 @@
 
 ## Installation
 
-Installation of the cellstate python package can simply be done by going in the package folder and running 
-
 If you want to use cellstates from within the folder (for example to use run_cellstates.py), run
+
 `python setup.py build_ext --inplace`
+
 If you want to import the cellstates python module elsewhere, run
+
 `python setup.py build_ext`
 
 Finally, install with
+
 `python setup.py install`
 
 ### Requirements
