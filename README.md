@@ -4,7 +4,7 @@
 
 ## Installation
 
-If you want to use cellstates from within the folder (for example to use run_cellstates.py), run
+If you want to use cellstates from within the folder, run
 
 `python setup.py build_ext --inplace`
 
