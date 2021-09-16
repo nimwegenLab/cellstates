@@ -2,7 +2,7 @@
 
 `cellstates` is a python package for analysis of UMI-based single-cell RNA-seq data. The underlying mathematical model infers clusters of cells that are in the same gene expression state, meaning that all remaining heterogeneity within each cluster can be explained by expected measurement noise. Thus, we find the most fine-grained clustering that is  supported by the data. Furthermore, we describe the higher-order relationship of these cell-states in a hierarchical tree and provide scores for marker-genes within this tree.
 
-# Installation
+## Installation
 
 Installation of the cellstate python package can simply be done by going in the package folder and running 
 
@@ -14,19 +14,17 @@ If you want to import the cellstates python module elsewhere, run
 Finally, install with
 `python setup.py install`
 
-## Requirements
-A C-compiler with **OpenMP** is required for installation. See below for possible solutions with MacOS. 
+### Requirements
+A C-compiler with OpenMP is required for installation. See below for possible solutions with MacOS. 
 
 **Python packages**
-Mandatory: numpy, pandas, matplotlib, scipy
+* Mandatory: numpy, pandas, matplotlib, scipy
+* Strongly recommended: Cython
+* Recommended for plotting of hierarchies: [ete3](http://etetoolkit.org/)
 
-Strongly recommended: Cython
-
-Recommended for plotting of hierarchies: [ete3](http://etetoolkit.org/)
-
-## MacOS
+### MacOS
 The default compiler on MacOS does not include OpenMP support. To solve this, we suggest two possible solutions:
-### Use conda compilers and environment
+#### Use conda compilers and environment
 Modified solution from [here](https://github.com/scikit-learn/scikit-learn/blob/master/doc/developers/advanced_installation.rst#macos-compilers-from-conda-forge) by creating a conda environment:
 
 ```
@@ -36,7 +34,7 @@ conda activate cellstates-env
 python setup.py build_ext --inplace
 ```
 
-### Using gcc9
+#### Using gcc9
 Using Macports:
 ```
 port install gcc9
@@ -51,8 +49,9 @@ CC=g++-9 python setup.py build_ext --inplace
 
 
 
-# Commandline tool
-The most **basic version**, can be run through the command line as follows:
+## Commandline tool
+### Basic instructions
+The most basic version, can be run through the command line as follows:
 
 `python ./scripts/run_cellstates.py data.tsv`
 
@@ -75,11 +74,12 @@ It returns the following **results**:
 * `CellID.txt` list of cell names/barcodes of the concatenated data table
 
 
-## Advanced Commandline tool
+### Advanced instructions
 ```
 usage: run_cellstates.py [-h] [-o OUTDIR] [-d DIRICHLET]
-                         [--optimize_dirichlet] [-i INIT] [-g GENES]
-                         [-c [CELLS [CELLS ...]]] [-t THREADS] [-s SEED]
+                         [--prior-optimization] [--no-prior-optimization]
+                         [-i INIT] [-g GENES] [-c [CELLS [CELLS ...]]]
+                         [-t THREADS] [-s SEED]
                          data [data ...]
 
 positional arguments:
@@ -91,7 +91,10 @@ optional arguments:
                         directory for output
   -d DIRICHLET, --dirichlet DIRICHLET
                         dirichlet prior parameter
-  --optimize_dirichlet  whether to optimize the dirichlet prior
+  --prior-optimization  add flag to optimize the dirichlet prior
+                        [Default=True]
+  --no-prior-optimization
+                        add flag to not optimize the dirichlet prior
   -i INIT, --init INIT  init clusters (path to file)
   -g GENES, --genes GENES
                         gene names (path to file)
@@ -107,6 +110,10 @@ Additional comments for selected parameters:
 * `CELLS`: list of cell names/barcodes should be given in a simple text file separated by line breaks. Multiple files can be given if there are multiple data files.
 * `THREADS`: Default is one core
 
-# Python module and interpretation of results
+## Python module and interpretation of results
 
 Check out the cellstate\_introduction.ipynb and Example_analysis.ipynb jupyter notebooks for information about how to use the cellstates python module and how to analyse and interpret outputs.
+
+## Testing
+
+For now, please check cellstate\_introduction.ipynb for some tests you can run. 
