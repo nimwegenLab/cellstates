@@ -29,8 +29,12 @@ def main():
                         help='directory for output', type=str)
     parser.add_argument('-d', '--dirichlet', default=None,
                         help='dirichlet prior parameter', type=float)
-    parser.add_argument('--optimize_dirichlet', action='store_true',
-                        help='whether to optimize the dirichlet prior')
+    parser.add_argument('--prior-optimization', dest='optimize_prior',
+                        action='store_true',
+                        help='add flag to optimize the dirichlet prior [Default=True]')
+    parser.add_argument('--no-prior-optimization', dest='optimize_prior',
+                        action='store_false',
+                        help='add flag to not optimize the dirichlet prior')
     parser.add_argument('-i', '--init', default=None,
                         help='init clusters (path to file)', type=str)
     parser.add_argument('-g', '--genes', default=None,
@@ -41,7 +45,7 @@ def main():
                         help='number of threads', type=int)
     parser.add_argument('-s', '--seed', default=1,
                         help='seed for random generator', type=int)
-
+    parser.set_defaults(optimize_prior=True)
     args = parser.parse_args()
 
     # -------- load input data -------- #
@@ -108,7 +112,7 @@ def main():
         if alpha <= 0:
             raise ValueError('dirichlet prior parameter must be > 0')
     # whether pseudocounts are optimized
-    find_best_alpha = args.optimize_dirichlet
+    find_best_alpha = args.optimize_prior
 
     logging.info(f'writing to directory {args.outdir}')
 
