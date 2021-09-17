@@ -69,7 +69,7 @@ def plot_hierarchy_scipy(hierarchy_df, n_groups=2,
 if USE_ETE:
     def plot_hierarchy_ete3(hierarchy_df, clusters, n_groups=2,
                             colors=None, linewidth = 2,
-                            show_cells=False, leaf_scale=0.2,
+                            show_cells=False, leaf_scale=1.,
                             file_path=None):
         """
         Parameters
@@ -140,7 +140,7 @@ if USE_ETE:
                 leaf_style = NodeStyle(**style)
                 if not show_cells:
                     cellstate_id = int(node.name[1:])
-                    leaf_style['size'] = size_dict[cellstate_id]*leaf_scale
+                    leaf_style['size'] = np.sqrt(size_dict[cellstate_id])*leaf_scale
                 node.set_style(leaf_style)
             else:
                 ancestor = t.get_common_ancestor([str(l) for l in leaf_names])
@@ -151,7 +151,7 @@ if USE_ETE:
                         leaf_style = NodeStyle(**style)
                         if not show_cells:
                             cellstate_id = int(node.name[1:])
-                            leaf_style['size'] = size_dict[cellstate_id]*leaf_scale
+                            leaf_style['size'] = np.sqrt(size_dict[cellstate_id])*leaf_scale
                         node.set_style(leaf_style)
                     else:
                         node.set_style(style)
