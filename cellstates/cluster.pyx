@@ -340,7 +340,7 @@ def merge_clusters_hierarchical(Cluster clst,
     # 2D array  that  contains  change  in  log-likelihood
     # for  the  merge of any of two clusters
     cdef np.ndarray[np.float_t, ndim = 2] delta_LL
-    delta_LL = np.zeros((clst.N_boxes, clst.N_boxes), dtype=np.float)
+    delta_LL = np.zeros((clst.N_boxes, clst.N_boxes), dtype=np.float64)
 
     for i in range(clst.N_boxes):
         PyErr_CheckSignals()
@@ -427,7 +427,7 @@ def optimize_cell_positions_full(Cluster clst):
         double delta
 
     cell_iter = np.random.permutation(clst.N_samples)
-    best_delta_LL = np.zeros(clst.N_samples, dtype=np.float)
+    best_delta_LL = np.zeros(clst.N_samples, dtype=np.float64)
     while True:
         PyErr_CheckSignals()
         for cell in cell_iter:
@@ -585,7 +585,7 @@ cdef class Cluster:
 
     cdef void _init_lgamma_cache(self):
         cdef int i, g
-        self._lgamma_cache = np.zeros((self.G, self.n_cache), dtype=np.float)
+        self._lgamma_cache = np.zeros((self.G, self.n_cache), dtype=np.float64)
         for g in range(self.G):
             for i in range(self.n_cache):
                 self._lgamma_cache[g, i] = lgamma(self.LAMBDA[g] + i)
@@ -608,12 +608,12 @@ cdef class Cluster:
         self._cluster_sizes = np.zeros(self.N_boxes, dtype=np.int32)
         # total counts per gene in each cluster
         self._cluster_umi_counts = np.zeros((self.G, self.N_boxes),
-                                            dtype=np.int)
+                                            dtype=np.int64)
 
         # total counts in each cluster
-        self._cluster_umi_sum = np.zeros(self.N_boxes, dtype=np.int)
+        self._cluster_umi_sum = np.zeros(self.N_boxes, dtype=np.int64)
         # total counts per cell
-        self._cell_umi_sum = np.zeros(self.N_samples, dtype=np.int)
+        self._cell_umi_sum = np.zeros(self.N_samples, dtype=np.int64)
 
         for i in range(self.N_samples):
             c = self._clusters[i]
@@ -630,7 +630,7 @@ cdef class Cluster:
         """ calculate all cluster likelihoods """
         cdef:
             int c
-        self._likelihood = np.zeros(self.N_boxes, dtype=np.float)
+        self._likelihood = np.zeros(self.N_boxes, dtype=np.float64)
         for c in range(self.N_boxes):
             self._likelihood[c] = find_cluster_LL(self, c)
 
@@ -697,24 +697,16 @@ cdef class Cluster:
         cdef:
             np.ndarray[np.int32_t, ndim = 1] \
                 new_clusters = np.zeros(self.N_samples, dtype=np.int32)
-#             np.ndarray[np.int32_t, ndim = 1] \
-#                 new_cluster_sizes = np.zeros(Nb_new, dtype=np.int32)
             np.ndarray[np.float_t, ndim = 1] \
-                new_likelihood = np.zeros(Nb_new, dtype=np.float)
-#             np.ndarray[np.int_t, ndim = 2] \
-#                 new_cluster_umi_counts = np.zeros((self.G, Nb_new), dtype=np.int)
+                new_likelihood = np.zeros(Nb_new, dtype=np.float64)
 
         for i in range(self.n_clusters):
             c = mapping[i]
-#             new_cluster_sizes[i] = self._cluster_sizes[c]
             new_likelihood[i] = self._likelihood[c]
             new_clusters[self.clusters == c] = i
-#             new_cluster_umi_counts[:, i] = self.cluster_umi_counts[:, c]
 
         self._clusters = new_clusters
-#         self._cluster_sizes = new_cluster_sizes
         self._likelihood = new_likelihood
-#         self._cluster_umi_counts = new_cluster_umi_counts
         self._init_counts()
 
         return mapping
@@ -1083,38 +1075,38 @@ cdef class Cluster:
     @property
     def likelihood(self):
         """ array of log-likelihoods for every cluster """
-        return np.asarray(self._likelihood, dtype=np.float)
+        return np.asarray(self._likelihood, dtype=np.float64)
 
     @property
     def clusters(self):
         """ array specifying clusters.
         clusters[i] = j means cell i is in cluster j """
-        return np.asarray(self._clusters, dtype=np.int)
+        return np.asarray(self._clusters, dtype=np.int32)
 
     @property
     def cluster_sizes(self):
         """ array of cluster sizes """
-        return np.asarray(self._cluster_sizes, dtype=np.int)
+        return np.asarray(self._cluster_sizes, dtype=int)
 
     @property
     def cluster_umi_counts(self):
         """ array of total UMI counts per gene in each cluster """
-        return np.asarray(self._cluster_umi_counts, dtype=np.int)
+        return np.asarray(self._cluster_umi_counts, dtype=int)
 
     @property
     def cluster_umi_sum(self):
         """ array of total UMI counts in each cluster """
-        return np.asarray(self._cluster_umi_sum, dtype=np.int)
+        return np.asarray(self._cluster_umi_sum, dtype=int)
 
     @property
     def dirichlet_pseudocounts(self):
         """ array of dirichlet prior pseudocounts """
-        return np.asarray(self.LAMBDA, dtype=np.float)
+        return np.asarray(self.LAMBDA, dtype=float)
 
     @property
     def umi_data(self):
         """ numpy array of UMI counts """
-        return np.asarray(self.data, dtype=np.int)
+        return np.asarray(self.data, dtype=int)
 
     @property
     def genes(self):

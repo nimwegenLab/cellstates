@@ -29,8 +29,12 @@ def main():
                         help='directory for output', type=str)
     parser.add_argument('-d', '--dirichlet', default=None,
                         help='dirichlet prior parameter', type=float)
-    parser.add_argument('--optimize_dirichlet', action='store_true',
-                        help='whether to optimize the dirichlet prior')
+    parser.add_argument('--prior-optimization', dest='optimize_prior',
+                        action='store_true',
+                        help='add flag to optimize the dirichlet prior [Default=True]')
+    parser.add_argument('--no-prior-optimization', dest='optimize_prior',
+                        action='store_false',
+                        help='add flag to not optimize the dirichlet prior')
     parser.add_argument('-i', '--init', default=None,
                         help='init clusters (path to file)', type=str)
     parser.add_argument('-g', '--genes', default=None,
@@ -41,30 +45,34 @@ def main():
                         help='number of threads', type=int)
     parser.add_argument('-s', '--seed', default=1,
                         help='seed for random generator', type=int)
-
+    parser.set_defaults(optimize_prior=True)
     args = parser.parse_args()
 
+    # -------- load input data -------- #
+
+    # iterate over datafiles and load them
+    # data and cellnames are added to lists for concatenating
     datafiles = args.data
     all_data = []
     all_cells = []
     genes = None
     for datafile in datafiles:
+        logging.info(f'loading {datafile}')
+
+        # check filetype and run appropriate loading function
         filetype=datafile.split('.')[-1]
         filename=datafile.split('.')[:-1]
-
         if filetype in ['txt', 'tsv', 'zip', 'gz', 'bz2', 'xz', 'csv']:
             df = pd.read_csv(datafile, delim_whitespace=True, header=0, index_col=0)
             if df.shape[1]==1:
                 # if above fails, use slower method and infer delimiter
                 df = pd.read_csv(datafile, sep=None, header=0, index_col=0,
-                                engine='python')
-            df = df.astype(np.int, copy=False)
+                                 engine='python')
             genes = df.index.values
             cells = df.columns.values
             data = df.values
         elif filetype=='npy':
             data = np.load(datafile)
-            data = data.astype(np.int, copy=False)
             cells = [f'{filename}-cell_{i}' for i in range(data.shape[1])]
         elif filetype=='mtx':
             import scipy.io as sio
@@ -72,23 +80,39 @@ def main():
             cells = [f'{filename}-cell_{i}' for i in range(data.shape[1])]
         else:
             raise ValueError('filetype not recognized', datafile)
+
+        # round to nearest int and cast to np.int64 [long] dtype
+        if np.issubdtype(data.dtype, np.floating):
+            data = np.rint(data, out=data)
+        data = data.astype(np.int64, copy=False)
+
         all_data.append(data)
         all_cells.append(cells)
+
+    # build final data table and cell list
     data = np.concatenate(all_data, axis=1)
+    if args.cells is not None:
+        all_cells = []
+        for cellfile in args.cells:
+            all_cells.append(np.loadtxt(cellfile, dtype=str))
     cells = np.concatenate(all_cells)
 
     if args.genes is not None:
-        genes = np.loadtxt(args.genes, dtype=str)
+        genes = np.loadtxt(args.genes, dtype=str, delimiter='\n')
     elif genes is None:
         genes = np.arange(data.shape[0], dtype=int)
 
+    # -------- initialise model parameters -------- #
+
+    # construct initial array of Dirichlet pseudocounts with scale alpha
     if args.dirichlet is None:
         alpha = 2**(np.round(np.log2(data.sum()/data.shape[1])))
     else:
         alpha = args.dirichlet
         if alpha <= 0:
             raise ValueError('dirichlet prior parameter must be > 0')
-    find_best_alpha = args.optimize_dirichlet
+    # whether pseudocounts are optimized
+    find_best_alpha = args.optimize_prior
 
     logging.info(f'writing to directory {args.outdir}')
 
@@ -102,8 +126,9 @@ def main():
     genes = genes[mask]
     G, N = data.shape
 
+    # construct initial cluster array
     if args.init is None:
-        cluster_init = np.arange(N, dtype=np.int)
+        cluster_init = np.arange(N, dtype=np.int32)
         logging.info('initialize clusters with all cells seperate')
     elif args.init.endswith('.npy'):
         cluster_init = np.load(args.init)
@@ -116,6 +141,9 @@ def main():
 
     clst = Cluster(data, LAMBDA, cluster_init.copy(),
                    num_threads=args.threads, n_cache=N_CACHE, seed=args.seed)
+
+    # -------- run optimization algorithm -------- #
+
     run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)
 
     # optimise alpha and run MCMC again if needed
@@ -162,6 +190,8 @@ def main():
             logging.info(f'optimal dirichlet prior parameter is ' \
                          f'alpha={best_alpha}')
             find_best_alpha=False
+
+    # -------- Save outputs of model -------- #
 
     logging.info('save dirichlet pseudocounts used.')
     cluster_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')
