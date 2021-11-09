@@ -18,7 +18,7 @@ cpdef np.ndarray[np.float_t, ndim = 1] get_cluster_distances(Cluster clst):
         double distance
         int Nb = clst.N_boxes
         int idx = 0
-        np.ndarray[np.float_t, ndim = 1] X = np.zeros(Nb*(Nb-1)/2,
+        np.ndarray[np.float_t, ndim = 1] X = np.zeros(Nb*(Nb-1)//2,
                                                       dtype=np.float64)
     for i in range(Nb):
         for j in range(i+1, Nb):

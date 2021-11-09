@@ -7,3 +7,4 @@ try:
 except ImportError:
     pass
 from .run import run_mcmc
+from .chelpers import get_cluster_distances
