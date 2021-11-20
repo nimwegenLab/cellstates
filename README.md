@@ -2,6 +2,8 @@
 
 `cellstates` is a python package for analysis of UMI-based single-cell RNA-seq data. The underlying mathematical model infers clusters of cells that are in the same gene expression state, meaning that all remaining heterogeneity within each cluster can be explained by expected measurement noise. Thus, we find the most fine-grained clustering that is  supported by the data. Furthermore, we describe the higher-order relationship of these cell-states in a hierarchical tree and provide scores for marker-genes within this tree.
 
+`cellstates` was developed by Pascal Grobecker and Erik van Nimwegen. 
+
 ## Installation
 
 If you want to use cellstates from within the folder, run
