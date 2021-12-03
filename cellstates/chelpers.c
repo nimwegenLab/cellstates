@@ -3268,7 +3268,7 @@ static PyArrayObject *__pyx_f_10cellstates_8chelpers_marker_scores(struct __pyx_
  *                 x = (clst._cluster_umi_sum[c1] + clst.LAMBDA_sum) / \
  *                         (clst._cluster_umi_sum[c1] + clst._cluster_umi_sum[c2] + 2*clst.LAMBDA_sum)             # <<<<<<<<<<<<<<
  *                 P = betainc(a, b, x)*weight
- *                 gene_scores[g] += logit(P)
+ *                 gene_scores[g] += P
  */
                                 __pyx_t_11 = __pyx_v_c1;
                                 __pyx_t_15 = __pyx_v_c2;
@@ -3286,7 +3286,7 @@ static PyArrayObject *__pyx_f_10cellstates_8chelpers_marker_scores(struct __pyx_
  *                 x = (clst._cluster_umi_sum[c1] + clst.LAMBDA_sum) / \
  *                         (clst._cluster_umi_sum[c1] + clst._cluster_umi_sum[c2] + 2*clst.LAMBDA_sum)
  *                 P = betainc(a, b, x)*weight             # <<<<<<<<<<<<<<
- *                 gene_scores[g] += logit(P)
+ *                 gene_scores[g] += P
  * 
  */
                                 __pyx_v_P = (__pyx_f_5scipy_7special_14cython_special_betainc(__pyx_v_a, __pyx_v_b, __pyx_v_x, 0) * __pyx_v_weight);
@@ -3294,12 +3294,12 @@ static PyArrayObject *__pyx_f_10cellstates_8chelpers_marker_scores(struct __pyx_
                                 /* "cellstates/chelpers.pyx":79
  *                         (clst._cluster_umi_sum[c1] + clst._cluster_umi_sum[c2] + 2*clst.LAMBDA_sum)
  *                 P = betainc(a, b, x)*weight
- *                 gene_scores[g] += logit(P)             # <<<<<<<<<<<<<<
+ *                 gene_scores[g] += P             # <<<<<<<<<<<<<<
  * 
- *     return np.asarray(gene_scores, dtype=float)
+ *     for g in range(clst.G):
  */
                                 __pyx_t_15 = __pyx_v_g;
-                                *((double *) ( /* dim=0 */ (__pyx_v_gene_scores.data + __pyx_t_15 * __pyx_v_gene_scores.strides[0]) )) += __pyx_fuse_0__pyx_f_5scipy_7special_14cython_special_logit(__pyx_v_P, 0);
+                                *((double *) ( /* dim=0 */ (__pyx_v_gene_scores.data + __pyx_t_15 * __pyx_v_gene_scores.strides[0]) )) += __pyx_v_P;
                             }
                         }
                     }
@@ -3353,32 +3353,56 @@ static PyArrayObject *__pyx_f_10cellstates_8chelpers_marker_scores(struct __pyx_
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "cellstates/chelpers.pyx":81
- *                 gene_scores[g] += logit(P)
+ *                 gene_scores[g] += P
+ * 
+ *     for g in range(clst.G):             # <<<<<<<<<<<<<<
+ *         gene_scores[g] = logit(gene_scores[g])
+ * 
+ */
+  __pyx_t_14 = __pyx_v_clst->G;
+  __pyx_t_13 = __pyx_t_14;
+  for (__pyx_t_9 = 0; __pyx_t_9 < __pyx_t_13; __pyx_t_9+=1) {
+    __pyx_v_g = __pyx_t_9;
+
+    /* "cellstates/chelpers.pyx":82
+ * 
+ *     for g in range(clst.G):
+ *         gene_scores[g] = logit(gene_scores[g])             # <<<<<<<<<<<<<<
+ * 
+ *     return np.asarray(gene_scores, dtype=float)
+ */
+    __pyx_t_15 = __pyx_v_g;
+    __pyx_t_11 = __pyx_v_g;
+    *((double *) ( /* dim=0 */ (__pyx_v_gene_scores.data + __pyx_t_11 * __pyx_v_gene_scores.strides[0]) )) = __pyx_fuse_0__pyx_f_5scipy_7special_14cython_special_logit((*((double *) ( /* dim=0 */ (__pyx_v_gene_scores.data + __pyx_t_15 * __pyx_v_gene_scores.strides[0]) ))), 0);
+  }
+
+  /* "cellstates/chelpers.pyx":84
+ *         gene_scores[g] = logit(gene_scores[g])
  * 
  *     return np.asarray(gene_scores, dtype=float)             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(((PyObject *)__pyx_r));
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_asarray); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_asarray); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_gene_scores, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_gene_scores, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_1);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 81, __pyx_L1_error)
-  __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 81, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_4, __pyx_t_1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 84, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (!(likely(((__pyx_t_6) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_6, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 81, __pyx_L1_error)
+  if (!(likely(((__pyx_t_6) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_6, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 84, __pyx_L1_error)
   __pyx_r = ((PyArrayObject *)__pyx_t_6);
   __pyx_t_6 = 0;
   goto __pyx_L0;

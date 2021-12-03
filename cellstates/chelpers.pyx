@@ -76,6 +76,9 @@ cpdef np.ndarray[np.float_t, ndim = 1] marker_scores(Cluster clst, list C1, list
                 x = (clst._cluster_umi_sum[c1] + clst.LAMBDA_sum) / \
                         (clst._cluster_umi_sum[c1] + clst._cluster_umi_sum[c2] + 2*clst.LAMBDA_sum)
                 P = betainc(a, b, x)*weight
-                gene_scores[g] += logit(P)
+                gene_scores[g] += P
+
+    for g in range(clst.G):
+        gene_scores[g] = logit(gene_scores[g])
 
     return np.asarray(gene_scores, dtype=float)
