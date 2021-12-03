@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.special import gammaln
 from .cluster import Cluster
+from .chelpers import marker_scores
 
 
 # ------ helper functions for cluster hierarchies ------
@@ -191,10 +192,12 @@ def gene_contribution_multi(all_n, lam):
     d += binomial_p(all_n_sum, lam)
     return d
 
-def marker_score_table(clst, hierarchy_df):
+def gene_contribution_table(clst, hierarchy_df):
     """
-    Get marker gene scores based on binomial model for each step in a
-    cluster hierarchy.
+    Returns a table that, for each step in the cluster hierarchy, quantifies
+    how much each gene contributes to the change in log-likelihood when these
+    clusters are merged. In other words, it gives a score for each gene for
+    how different its mean expression is between branches.
 
     Parameters
     ----------
@@ -203,7 +206,7 @@ def marker_score_table(clst, hierarchy_df):
 
     Returns
     -------
-    marker_table : (N_merges, N_genes) numpy array of floats
+    score_table : (N_merges, N_genes) numpy array of floats
         each row corresponds to a row in hierarchy_df, each column to a gene.
         Values indicate single gene contributions to change in log-likelihood
         of two clusters being merged - large negative values are marker genes
@@ -220,5 +223,42 @@ def marker_score_table(clst, hierarchy_df):
 
         clst.combine_two_clusters(c_new, c_old)
     clst.set_clusters(orignal_clusters)
+
+    return score_table
+
+
+def marker_score_table(clst, hierarchy_df):
+    """
+    Get marker gene scores for each step in a cluster hierarchy.
+
+    Parameters
+    ----------
+    clst : cellstate.Cluster object
+    hierarchy_df : hierarchy DataFrame of clst
+
+    Returns
+    -------
+    marker_table : (N_merges, N_genes) numpy array of floats
+        each row corresponds to a row in hierarchy_df, each column to a gene.
+        Values indicate single gene contributions to change in log-likelihood
+        of two clusters being merged - large negative values are marker genes
+    """
+    # create list where element i is a list of cellstates in the cluster
+    # initially, only one cellstate is in each cluster, but they will get
+    # merged
+    cellstate_clusters = []
+    for i in range(clst.N_boxes):
+        if clst.cluster_sizes[i]:
+            cellstate_clusters.append([i])
+        else:
+            cellstate_clusters.append([])
+
+    score_table = np.zeros((hierarchy_df.shape[0], clst.G))
+    for i, row in hierarchy_df.iterrows():
+        c_old, c_new = int(row.cluster_old), int(row.cluster_new)
+        d = marker_scores(clst, cellstate_clusters[c_new], cellstate_clusters[c_old])
+        score_table[i, :] = d
+
+        cellstate_clusters[c_new].extend(cellstate_clusters[c_old])
 
     return score_table
