@@ -50,9 +50,8 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000,
             clst.set_N_boxes(clst.n_clusters + 2)
             logging.debug(f'changed N_boxes to {clst.N_boxes}')
         try:
-            clst.biased_monte_carlo_sampling(
-                N_steps=N_steps,
-                tries_per_step=tries_per_step)
+            _ = clst.biased_monte_carlo_sampling(N_steps=N_steps,
+                                                 tries_per_step=tries_per_step)
         except RuntimeError as err:
             #N_batch = N_batch*10
             tries_per_step *= 10

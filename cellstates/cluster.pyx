@@ -216,8 +216,10 @@ cdef void merge_two_clusters(Cluster clst, int c1, int c2, delta=None):
 # ------ running MCMC ------ #
 
 
-cdef do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
-    """ uniform sampling of partition space with bias towards better partitions """
+cdef int do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
+    """ uniform sampling of partition space with bias towards better partitions
+    returns total number of attempted moves
+    """
     cdef:
         int max_tries = N_steps*tries_per_step
         int n_move_successes = 0, tries = 0
@@ -279,6 +281,7 @@ cdef do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
     if n_move_successes < N_steps:
         raise RuntimeError((f'Only {n_move_successes} moves found within loop limit.'
                             'Consider raising tries_per_step'))
+    return tries
 
 
 # ------ merging/cluster hierarchy ------ #
@@ -654,8 +657,10 @@ cdef class Cluster:
 
         Returns
         -------
-        None
-            The Cluster object is updated to contain a new partition
+        The Cluster object is updated to contain a new partition
+
+        total_tries : int
+            Number of proposed moves until N_steps were accepted.
 
         Raises
         ------
@@ -664,7 +669,7 @@ cdef class Cluster:
         """
         if N_batch > 0:
             tries_per_step = 100*N_batch*N_steps
-        do_biased_mc_moves(self, N_steps, tries_per_step)
+        return do_biased_mc_moves(self, N_steps, tries_per_step)
 
     def set_N_boxes(self, int Nb_new):
         """
