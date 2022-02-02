@@ -249,11 +249,9 @@ def main():
 
     logging.debug('get marker gene scores')
     score_table = marker_score_table(clst, hierarchy_df)
-    score_df = pd.concat([hierarchy_df,
-                          pd.DataFrame(score_table, columns=genes)],
-                         axis=1)
-    score_file = os.path.join(args.outdir, 'hierarchy_gene_scores.tsv')
-    logging.debug('save marker gene scores as hierarchy_gene_scores.tsv')
+    score_df = pd.DataFrame(score_table, columns=genes)
+    score_file = os.path.join(args.outdir, 'marker_gene_scores.tsv')
+    logging.debug('save marker gene scores as marker_gene_scores.tsv')
     score_df.to_csv(score_file, sep='\t', index=None)
 
 
