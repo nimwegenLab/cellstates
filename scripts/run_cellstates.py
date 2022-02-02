@@ -13,8 +13,9 @@ import pandas as pd
 import argparse
 import logging
 import os
+import time
 
-LOG_LEVEL='WARNING'
+LOG_LEVEL='INFO'
 logformat = '%(asctime)-15s - %(levelname)s:%(message)s'
 logging.basicConfig(format=logformat, level=getattr(logging, LOG_LEVEL))
 
@@ -114,10 +115,8 @@ def main():
     # whether pseudocounts are optimized
     find_best_alpha = args.optimize_prior
 
-    logging.info(f'writing to directory {args.outdir}')
-
     LAMBDA = alpha*np.sum(data, axis=1)/np.sum(data)
-    logging.info(f'using dirichlet prior parameter alpha={alpha}')
+    logging.debug(f'using dirichlet prior parameter alpha={alpha}')
 
     # filter out non-expressed genes
     mask = LAMBDA > 0
@@ -129,7 +128,7 @@ def main():
     # construct initial cluster array
     if args.init is None:
         cluster_init = np.arange(N, dtype=np.int32)
-        logging.info('initialize clusters with all cells seperate')
+        logging.debug('initialize clusters with all cells seperate')
     elif args.init.endswith('.npy'):
         cluster_init = np.load(args.init)
         logging.info(f'initialize clusters from {args.init}')
@@ -144,6 +143,21 @@ def main():
 
     # -------- run optimization algorithm -------- #
 
+    # estimate total runtime
+    trial_steps = 100
+    start = time.time()
+    try:
+        n_moves = clst.biased_monte_carlo_sampling(N_steps=trial_steps,
+                                                   tries_per_step=TPS)
+    except:
+        n_moves = TPS*trial_steps
+    runtime = time.time() - start
+    # empirical power-law for prediction of total runtime
+    pred_time = 150*np.power(N, 1.7)*runtime/n_moves
+    time_str = time.strftime("%d days, %H hours, %M minutes",
+                             time.gmtime(pred_time))
+    logging.info('predicted runtime: ' + time_str)
+
     run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)
 
     # optimise alpha and run MCMC again if needed
@@ -153,11 +167,11 @@ def main():
 
         # check if increasing alpha increases LL
         a = alpha
-        logging.info(f'alpha={a}, total_likelihood={clst.total_likelihood}')
+        logging.debug(f'alpha={a}, total_likelihood={clst.total_likelihood}')
         while True:
             a = a*2
             clst.set_dirichlet_pseudocounts(a, n_cache=0)
-            logging.info(f'alpha={a}, total_likelihood={clst.total_likelihood}')
+            logging.debug(f'alpha={a}, total_likelihood={clst.total_likelihood}')
             if clst.total_likelihood > best_likelihood:
                 best_likelihood = clst.total_likelihood
                 best_alpha = a
@@ -170,7 +184,7 @@ def main():
             while True:
                 a = a/2
                 clst.set_dirichlet_pseudocounts(a, n_cache=0)
-                logging.info(f'alpha={a}, total_likelihood={clst.total_likelihood}')
+                logging.debug(f'alpha={a}, total_likelihood={clst.total_likelihood}')
                 if clst.total_likelihood > best_likelihood:
                     best_likelihood = clst.total_likelihood
                     best_alpha = a
@@ -178,26 +192,28 @@ def main():
                     break
 
         clst.set_dirichlet_pseudocounts(best_alpha, n_cache=N_CACHE)
-        logging.info(f'alpha={best_alpha}, total_likelihood={clst.total_likelihood}')
+        logging.debug(f'alpha={best_alpha}, total_likelihood={clst.total_likelihood}')
         # if best_alpha is different, run optimization with new value
         if best_alpha!=alpha:
-            logging.info(f'run MCMC with new dirichlet prior parameter ' \
+            logging.debug(f'run MCMC with new dirichlet prior parameter ' \
                          f'alpha={best_alpha}')
             clst.set_clusters(cluster_init.copy())
             run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)
             alpha = best_alpha
         else:
-            logging.info(f'optimal dirichlet prior parameter is ' \
+            logging.debug(f'optimal dirichlet prior parameter is ' \
                          f'alpha={best_alpha}')
             find_best_alpha=False
 
     # -------- Save outputs of model -------- #
 
-    logging.info('save dirichlet pseudocounts used.')
+    logging.info(f'saving results to directory {args.outdir}')
+
+    logging.debug('save dirichlet pseudocounts used.')
     cluster_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')
     np.savetxt(cluster_file, clst.dirichlet_pseudocounts)
 
-    logging.info('get cluster hierarchy.')
+    logging.debug('get cluster hierarchy.')
     hierarchy_file = os.path.join(args.outdir, 'cluster_hierarchy.tsv')
     cluster_hierarchy, delta_LL_history = clst.get_cluster_hierarchy()
 
@@ -218,24 +234,24 @@ def main():
         cluster_hierarchy = np.vectorize(reverse_map.__getitem__)(cluster_hierarchy)
 
     hierarchy_df = get_hierarchy_df(cluster_hierarchy, delta_LL_history)
-    logging.info('save cluster hierarchy as cluster_hierarchy.tsv')
+    logging.debug('save cluster hierarchy as cluster_hierarchy.tsv')
     hierarchy_df.to_csv(hierarchy_file, sep='\t', index=None)
 
-    logging.info('save cell names')
+    logging.debug('save cell names')
     cellfile = os.path.join(args.outdir, 'CellID.txt')
     np.savetxt(cellfile, cells, fmt='%s')
 
-    logging.info('save clusters as optimized_clusters.txt')
+    logging.debug('save clusters as optimized_clusters.txt')
     cluster_file = os.path.join(args.outdir, 'optimized_clusters.txt')
     np.savetxt(cluster_file, clst.clusters, fmt='%i')
 
-    logging.info('get marker gene scores')
+    logging.debug('get marker gene scores')
     score_table = marker_score_table(clst, hierarchy_df)
     score_df = pd.concat([hierarchy_df,
                           pd.DataFrame(score_table, columns=genes)],
                          axis=1)
     score_file = os.path.join(args.outdir, 'hierarchy_gene_scores.tsv')
-    logging.info('save marker gene scores as hierarchy_gene_scores.tsv')
+    logging.debug('save marker gene scores as hierarchy_gene_scores.tsv')
     score_df.to_csv(score_file, sep='\t', index=None)
 
 
