@@ -153,9 +153,11 @@ def main():
         n_moves = TPS*trial_steps
     runtime = time.time() - start
     # empirical power-law for prediction of total runtime
-    pred_time = 150*np.power(N, 1.7)*runtime/n_moves
-    time_str = time.strftime("%d days, %H hours, %M minutes",
-                             time.gmtime(pred_time))
+    pred_time = 120*np.power(N, 1.7)*runtime/n_moves
+    days = pred_time // (3600*24)
+    hours = pred_time // 3600 - days*24
+    minutes = pred_time // 60 - days*60*24 - hours*60
+    time_str = f'{days:.0f} days, {hours:.0f} hours, {minutes:.0f} minutes'
     logging.info('predicted runtime: ' + time_str)
 
     run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)

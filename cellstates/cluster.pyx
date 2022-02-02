@@ -216,7 +216,7 @@ cdef void merge_two_clusters(Cluster clst, int c1, int c2, delta=None):
 # ------ running MCMC ------ #
 
 
-cdef int do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500):
+cdef int do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500) except -1:
     """ uniform sampling of partition space with bias towards better partitions
     returns total number of attempted moves
     """
