@@ -158,7 +158,7 @@ def main():
     hours = pred_time // 3600 - days*24
     minutes = pred_time // 60 - days*60*24 - hours*60
     time_str = f'{days:.0f} days, {hours:.0f} hours, {minutes:.0f} minutes'
-    logging.info('predicted runtime: ' + time_str)
+    logging.info('predicted runtime (conservative estimate): ' + time_str)
 
     run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)
 
