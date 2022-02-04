@@ -54,7 +54,7 @@ def main():
     all_data = []
     all_cells = []
     genes = None
-    for datafiles in (args.data_old, args.data_new):
+    for datafiles in (args.old_data, args.new_data):
         index = 0
         for datafile in datafiles:
             logging.info(f'loading {datafile}')
@@ -130,7 +130,7 @@ def main():
     b = N - min_index + a
     cluster_init = np.concatenate([cluster_init, np.arange(a, b, dtype=int)])
 
-    clst = Cluster(data, LAMBDA, cluster_init.copy(),
+    clst = Cluster(data, LAMBDA, cluster_init.copy(), max_clusters=b+1,
                    num_threads=args.threads, n_cache=N_CACHE, seed=args.seed)
 
     # -------- run optimization algorithm -------- #
