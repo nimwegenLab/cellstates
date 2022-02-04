@@ -216,13 +216,15 @@ cdef void merge_two_clusters(Cluster clst, int c1, int c2, delta=None):
 # ------ running MCMC ------ #
 
 
-cdef int do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500) except -1:
+cdef int do_biased_mc_moves(Cluster clst, int N_steps,
+                            int tries_per_step=500, int min_index=0) except -1:
     """ uniform sampling of partition space with bias towards better partitions
     returns total number of attempted moves
     """
     cdef:
         int max_tries = N_steps*tries_per_step
         int n_move_successes = 0, tries = 0
+        int n_rand_max = clst.N_samples - min_index
         int m, c_new, c_old
         int n_empty
         double move_bias, move_likelihood
@@ -233,7 +235,7 @@ cdef int do_biased_mc_moves(Cluster clst, int N_steps, int tries_per_step=500) e
     while tries < max_tries and n_move_successes < N_steps:
         PyErr_CheckSignals()
 
-        m = randint(clst.N_samples)  # index of cell
+        m = randint(n_rand_max) + min_index  # index of cell
         c_new = randint(clst.N_boxes)  # index of new cluster
         c_old = clst._clusters[m]  # index of current cluster of m
 
@@ -637,7 +639,8 @@ cdef class Cluster:
         for c in range(self.N_boxes):
             self._likelihood[c] = find_cluster_LL(self, c)
 
-    def biased_monte_carlo_sampling(self, int N_steps=1, int tries_per_step=1000, int N_batch=0):
+    def biased_monte_carlo_sampling(self, int N_steps=1, int tries_per_step=1000,
+                                    int min_index=0, int N_batch=0):
         """
         Do N_steps steps of Monte-Carlo sampling of partition space where the
         move-set is biased as towards higher likelihood partitions.
@@ -648,12 +651,12 @@ cdef class Cluster:
             Number of MCMC steps to run.
         tries_per_step : int, default=1000
             Number of moves proposed per step before RuntimeError is raised.
+        min_index : int, default=0
+            Only move cells with index min_index to N_samples-1
         N_batch : int, default=0
             Deprecated; Included for backward compatibility; use tries_per_step
             A maximum of 100*N_batch*N_steps moves can be proposed in total
             before a RuntimeError is raised.
-        new : bool, default=True
-            which method to use to sample partitions uniformly.
 
         Returns
         -------
@@ -669,7 +672,7 @@ cdef class Cluster:
         """
         if N_batch > 0:
             tries_per_step = 100*N_batch*N_steps
-        return do_biased_mc_moves(self, N_steps, tries_per_step)
+        return do_biased_mc_moves(self, N_steps, tries_per_step, min_index)
 
     def set_N_boxes(self, int Nb_new):
         """

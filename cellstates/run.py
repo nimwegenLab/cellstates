@@ -5,7 +5,7 @@ import logging
 import os
 
 
-def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000,
+def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000, min_index=0,
              log_level='INFO'):
     """
     function to run full Markov-chain Monte Carlo optimization algorithm on a
@@ -51,7 +51,8 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000,
             logging.debug(f'changed N_boxes to {clst.N_boxes}')
         try:
             _ = clst.biased_monte_carlo_sampling(N_steps=N_steps,
-                                                 tries_per_step=tries_per_step)
+                                                 tries_per_step=tries_per_step,
+                                                 min_index=min_index)
         except RuntimeError as err:
             #N_batch = N_batch*10
             tries_per_step *= 10
