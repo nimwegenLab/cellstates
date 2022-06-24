@@ -46,6 +46,12 @@ def main():
                         help='number of threads', type=int)
     parser.add_argument('-s', '--seed', default=1,
                         help='seed for random generator', type=int)
+    parser.add_argument('--save-intermediates', dest='save_intermediates',
+                        action='store_true',
+                        help='regularly save intermediate results')
+    parser.add_argument('--dirichlet-file', default=None, dest='dirichlet_file',
+                        help='dirichlet prior parameter file from previous run',
+                        type=str)
     parser.set_defaults(optimize_prior=True)
     args = parser.parse_args()
 
@@ -106,24 +112,35 @@ def main():
     # -------- initialise model parameters -------- #
 
     # construct initial array of Dirichlet pseudocounts with scale alpha
-    if args.dirichlet is None:
-        alpha = 2**(np.round(np.log2(data.sum()/data.shape[1])))
+    if args.dirichlet_file is not None:
+        LAMBDA = np.loadtxt(args.dirichlet_file)
+        alpha = LAMBDA.sum()
     else:
-        alpha = args.dirichlet
-        if alpha <= 0:
-            raise ValueError('dirichlet prior parameter must be > 0')
+        if args.dirichlet is None:
+            alpha = 2**(np.round(np.log2(data.sum()/data.shape[1])))
+        else:
+            alpha = args.dirichlet
+            if alpha <= 0:
+                raise ValueError('dirichlet prior parameter must be > 0')
+        LAMBDA = alpha*np.sum(data, axis=1)/np.sum(data)
+    logging.debug(f'using dirichlet prior parameter alpha={alpha}')
+
     # whether pseudocounts are optimized
     find_best_alpha = args.optimize_prior
 
-    LAMBDA = alpha*np.sum(data, axis=1)/np.sum(data)
-    logging.debug(f'using dirichlet prior parameter alpha={alpha}')
-
     # filter out non-expressed genes
-    mask = LAMBDA > 0
+    mask = np.any(data, axis=1)
     data = data[mask, :]
-    LAMBDA = LAMBDA[mask]
     genes = genes[mask]
     G, N = data.shape
+    if len(LAMBDA) == len(mask):
+        LAMBDA = LAMBDA[mask]
+    elif len(LAMBDA) != data.shape[0]:
+        raise ValueError(f'number of dirichlet prior parameters {len(LAMBDA)}' \
+                         + f'incompatible with number of total genes {len(mask)} or' \
+                         + f'expressed genes {data.shape[0]}')
+    # else assume LAMBDA was created from same data, by filtering out non-expressed genes
+
 
     # construct initial cluster array
     if args.init is None:
@@ -136,7 +153,7 @@ def main():
         cluster_init = np.loadtxt(args.init, dtype=str)
         cluster_map = {cn: i for i, cn in enumerate(np.unique(cluster_init))}
         cluster_init = np.array([cluster_map[cn] for cn in cluster_init])
-        logging.info(f'initialize clusters from {args.init} with mapping {cluster_map}')
+        logging.info(f'initialize clusters from {args.init}')
 
     clst = Cluster(data, LAMBDA, cluster_init.copy(),
                    num_threads=args.threads, n_cache=N_CACHE, seed=args.seed)
@@ -160,7 +177,15 @@ def main():
     time_str = f'{days:.0f} days, {hours:.0f} hours, {minutes:.0f} minutes'
     logging.info('predicted runtime (conservative estimate): ' + time_str)
 
-    run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)
+    if args.save_intermediates:
+        dirichlet_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')
+        np.savetxt(dirichlet_file, clst.dirichlet_pseudocounts)
+        intermediate_dir = args.outdir
+    else:
+        intermediate_dir = None
+
+    run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS,
+             results_dir=intermediate_dir)
 
     # optimise alpha and run MCMC again if needed
     while find_best_alpha:
@@ -200,7 +225,11 @@ def main():
             logging.debug(f'run MCMC with new dirichlet prior parameter ' \
                          f'alpha={best_alpha}')
             clst.set_clusters(cluster_init.copy())
-            run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS)
+            if args.save_intermediates:
+                dirichlet_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')
+                np.savetxt(dirichlet_file, clst.dirichlet_pseudocounts)
+            run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS,
+                     results_dir=intermediate_dir)
             alpha = best_alpha
         else:
             logging.debug(f'optimal dirichlet prior parameter is ' \
@@ -212,8 +241,8 @@ def main():
     logging.info(f'saving results to directory {args.outdir}')
 
     logging.debug('save dirichlet pseudocounts used.')
-    cluster_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')
-    np.savetxt(cluster_file, clst.dirichlet_pseudocounts)
+    dirichlet_file = os.path.join(args.outdir, 'dirichlet_pseudocounts.txt')
+    np.savetxt(dirichlet_file, clst.dirichlet_pseudocounts)
 
     logging.debug('get cluster hierarchy.')
     hierarchy_file = os.path.join(args.outdir, 'cluster_hierarchy.tsv')

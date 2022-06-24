@@ -6,7 +6,7 @@ import os
 
 
 def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000, min_index=0,
-             log_level='INFO'):
+             log_level='INFO', keep_intermediate=False):
     """
     function to run full Markov-chain Monte Carlo optimization algorithm on a
     Cluster object and save outputs in files.
@@ -15,8 +15,8 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000, min_ind
     ----------
     clst : Cluster object
     results_dir : str, default=None
-        path to directory where intermediate cluster states are stored as
-        clusters_****.npy at each breakpoint (**** represents a 4-digit count).
+        path to directory where the latest intermediate cluster state is stored
+        as clusters_intermediate.txt at each breakpoint.
         If None or empty string, nothing is saved.
     N_steps : int, default=10000
         Number of MCMC steps to initially run per breakpoint.
@@ -25,6 +25,9 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000, min_ind
         the optimization can last (and the better the optimum)
     log_level : {'DEBUG', 'INFO', 'WARNING', 'ERROR'}, default='INFO'
         verbosity of information of progression. Set to 'ERROR' to turn off.
+    keep_intermediate : bool, default=False
+        all intermediate cluster states are saved as
+        clusters_****.txt at each breakpoint (**** represents a 4-digit count).
 
     """
     logformat = '%(asctime)-15s - %(levelname)s:%(message)s'
@@ -32,13 +35,16 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000, min_ind
 
     logging.debug(f'initially check output every {N_steps} steps')
 
+    cluster_file = os.path.join(results_dir, 'intermediate_clusters.txt')
+
     i = 0
     # save initial configuration
     if results_dir:
         logging.debug(f'writing intermediate states to directory {results_dir}')
         logging.debug(f'write output {i:04d}')
-        cluster_file = os.path.join(results_dir, f'clusters_{i:04d}.npy')
-        np.save(cluster_file, clst.clusters)
+        if keep_intermediate:
+            cluster_file = os.path.join(results_dir, f'clusters_{i:04d}.txt')
+        np.savetxt(cluster_file, clst.clusters, fmt='%i')
     logging.debug(f'n_clusters={clst.n_clusters}, ' \
                  f'total likelihood={clst.total_likelihood}')
     old_likelihood = clst.total_likelihood
@@ -68,8 +74,9 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000, min_ind
                 old_likelihood = clst.total_likelihood
                 if results_dir:
                     logging.debug(f'write output {i:04d}')
-                    cluster_file = os.path.join(results_dir, f'clusters_{i:04d}.npy')
-                    np.save(cluster_file, clst.clusters)
+                    if keep_intermediate:
+                        cluster_file = os.path.join(results_dir, f'clusters_{i:04d}.txt')
+                    np.savetxt(cluster_file, clst.clusters, fmt='%i')
                 best_clusters = clst.clusters.copy()
                 logging.debug(f'n_clusters={clst.n_clusters}, ' \
                             f'total likelihood={clst.total_likelihood}')

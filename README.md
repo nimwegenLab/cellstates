@@ -107,12 +107,26 @@ optional arguments:
   -t THREADS, --threads THREADS
                         number of threads
   -s SEED, --seed SEED  seed for random generator
+  --save-intermediates  regularly save intermediate results
+  --dirichlet-file DIRICHLET_FILE 
+                        dirichlet prior parameter file from previous run
 ```
 Additional comments for selected parameters:
 * `INIT`: Cluster labels should be given in a simple text file separated by line breaks or as a binary .npy file. 
 * `GENES`: list of gene names should be given in a simple text file separated by line breaks.
 * `CELLS`: list of cell names/barcodes should be given in a simple text file separated by line breaks. Multiple files can be given if there are multiple data files.
 * `THREADS`: Default is one core
+
+### save and load intermediate progress
+`cellstates` can take a long time to run and you may want to save its progress. This can be done as follows:
+
+`python run_cellstates data.tsv --save-intermediates --outdir ./my_results`
+
+If the run is interrupted, it can be resumed by calling
+
+`python run_cellstates data.tsv --init ./my_results/intermediate_clusters.txt --dirichlet-file ./my_results/dirichlet_pseudocounts.txt --outdir ./my_results`
+
+Note that the shown runtime estimate currently does not take previous progress into account. 
 
 ## Python module and interpretation of results
 
