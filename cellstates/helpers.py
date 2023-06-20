@@ -22,7 +22,7 @@ def get_hierarchy_df(cluster_hierarchy, delta_LL_history):
 
 
 def hierarchy_to_newick(hierarchy_df, clusters,
-                        cell_leaves=True, distance=True, min_distance=1.):
+                        cell_leaves=True, distance=True, min_distance=0.):
     """
     Function for getting a newick string from a hierarchy DataFrame.
 
@@ -36,7 +36,7 @@ def hierarchy_to_newick(hierarchy_df, clusters,
     distance : bool, default=True
         whether to include distance (negative change in log-likelihood)
         in newick tree
-    min_distance : float, default=1.
+    min_distance : float, default=0.
         minimal branch length for very small or positive changes in
         log-likelihood
 
@@ -63,7 +63,7 @@ def hierarchy_to_newick(hierarchy_df, clusters,
     c_low = min(cluster_string_dict.keys())
 
     if distance:
-        distances = np.cumsum(np.where( (hierarchy_df.delta_LL >= 0) , 1, -hierarchy_df.delta_LL + 1))
+        distances = np.cumsum(np.where( (hierarchy_df.delta_LL >= 0) , min_distance, -hierarchy_df.delta_LL + min_distance))
 
     # use index i instead of step in case hierarchy_df.index is non-standard
     i = hierarchy_df.shape[0] - 1
