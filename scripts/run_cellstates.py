@@ -185,7 +185,7 @@ def main():
         intermediate_dir = None
 
     run_mcmc(clst, N_steps=N, log_level=LOG_LEVEL, tries_per_step=TPS,
-             results_dir=intermediate_dir)
+             results_dir=intermediate_dir, keep_intermediate=args.save_intermediate)
 
     # optimise alpha and run MCMC again if needed
     while find_best_alpha:
