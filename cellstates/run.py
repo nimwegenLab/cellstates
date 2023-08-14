@@ -35,11 +35,10 @@ def run_mcmc(clst, results_dir=None, N_steps=10000, tries_per_step=1000, min_ind
 
     logging.debug(f'initially check output every {N_steps} steps')
 
-    cluster_file = os.path.join(results_dir, 'intermediate_clusters.txt')
-
     i = 0
     # save initial configuration
     if results_dir:
+        cluster_file = os.path.join(results_dir, 'intermediate_clusters.txt')
         logging.debug(f'writing intermediate states to directory {results_dir}')
         logging.debug(f'write output {i:04d}')
         if keep_intermediate:
