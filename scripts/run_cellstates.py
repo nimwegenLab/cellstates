@@ -105,7 +105,7 @@ def main():
     cells = np.concatenate(all_cells)
 
     if args.genes is not None:
-        genes = np.loadtxt(args.genes, dtype=str, delimiter='\n')
+        genes = np.loadtxt(args.genes, dtype=str)
     elif genes is None:
         genes = np.arange(data.shape[0], dtype=int)
 
